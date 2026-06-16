@@ -1,0 +1,14 @@
+/* ═══════════════════════════════════════════════════════════════
+   Service Definition for ZC_PRPODIFOT_C
+   Exposes the DIFOT consumption view as an OData V4 service.
+
+   The service binding (ZC_PRPODIFOT_UI_V4) references this
+   definition and uses binding type OData V4 - UI.
+
+   Core calculation view: ZC_PRPODIFOT
+   ═══════════════════════════════════════════════════════════════ */
+@EndUserText.label: 'PO DIFOT Service Definition'
+define service ZC_PRPODIFOT_SRV {
+  expose ZC_PRPODIFOT_C        as PODIFOTItem;
+  expose ZC_PRPOGRHistoryLines as POGRHistoryLine;
+}

@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Building a Real-Time PO DIFOT Report in SAP S/4HANA Cloud</title>
+  <style>
+    /* ── Reset & Base ──────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f4f6f9;
+      color: #2c3e50;
+      line-height: 1.7;
+    }
+
+    /* ── Hero ──────────────────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, #003d6a 0%, #0070b8 60%, #00a8e0 100%);
+      color: #fff;
+      padding: 72px 24px 56px;
+      text-align: center;
+    }
+    .hero .tag {
+      display: inline-block;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.35);
+      border-radius: 20px;
+      font-size: 0.78rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: clamp(1.9rem, 4vw, 3rem);
+      font-weight: 700;
+      line-height: 1.2;
+      max-width: 820px;
+      margin: 0 auto 18px;
+    }
+    .hero p {
+      font-size: 1.1rem;
+      opacity: .88;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* ── Layout ────────────────────────────────────────────────────── */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    .content {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.08);
+      padding: 52px 60px;
+      margin: 40px auto;
+      max-width: 900px;
+    }
+    @media (max-width: 680px) {
+      .content { padding: 32px 20px; }
+    }
+
+    /* ── ToC ───────────────────────────────────────────────────────── */
+    .toc {
+      background: #f0f6fc;
+      border-left: 4px solid #0070b8;
+      border-radius: 0 6px 6px 0;
+      padding: 20px 28px;
+      margin-bottom: 48px;
+    }
+    .toc h2 { font-size: .85rem; text-transform: uppercase; letter-spacing: .08em; color: #0070b8; margin-bottom: 10px; }
+    .toc ol { padding-left: 18px; }
+    .toc li { margin: 5px 0; }
+    .toc a { color: #0070b8; text-decoration: none; font-size: .95rem; }
+    .toc a:hover { text-decoration: underline; }
+
+    /* ── Typography ────────────────────────────────────────────────── */
+    h2 {
+      font-size: 1.65rem;
+      color: #003d6a;
+      margin: 52px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e4edf5;
+    }
+    h3 {
+      font-size: 1.15rem;
+      color: #0070b8;
+      margin: 32px 0 10px;
+    }
+    p { margin: 0 0 16px; }
+    ul, ol { margin: 0 0 16px 24px; }
+    li { margin-bottom: 6px; }
+    a { color: #0070b8; }
+    a:hover { color: #005a9e; }
+    strong { color: #003d6a; }
+
+    /* ── Callout boxes ─────────────────────────────────────────────── */
+    .callout {
+      border-radius: 6px;
+      padding: 18px 22px;
+      margin: 24px 0;
+      font-size: .95rem;
+    }
+    .callout-blue  { background: #e8f3fb; border-left: 4px solid #0070b8; }
+    .callout-green { background: #e8f6ed; border-left: 4px solid #27ae60; }
+    .callout-amber { background: #fef9e7; border-left: 4px solid #f39c12; }
+    .callout p:last-child { margin-bottom: 0; }
+    .callout strong { color: inherit; }
+
+    /* ── DIFOT scorecard ───────────────────────────────────────────── */
+    .score-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+      margin: 24px 0 32px;
+    }
+    .score-card {
+      border-radius: 8px;
+      padding: 20px 16px;
+      text-align: center;
+    }
+    .score-card .icon { font-size: 2rem; margin-bottom: 8px; }
+    .score-card .label { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; margin-bottom: 4px; }
+    .score-card .value { font-size: 1.4rem; font-weight: 700; }
+    .sc-green  { background: #e8f6ed; color: #1d7a3e; }
+    .sc-red    { background: #fdecea; color: #b71c1c; }
+    .sc-orange { background: #fff3e0; color: #e65100; }
+    .sc-blue   { background: #e3f2fd; color: #0d47a1; }
+
+    /* ── Architecture diagram ──────────────────────────────────────── */
+    .arch-diagram {
+      background: #f8fbff;
+      border: 1px solid #d0e4f5;
+      border-radius: 8px;
+      padding: 32px 20px;
+      margin: 28px 0;
+      overflow-x: auto;
+    }
+    .arch-diagram svg { display: block; margin: 0 auto; }
+
+    /* ── Flow diagram ──────────────────────────────────────────────── */
+    .flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0;
+      margin: 28px 0;
+      justify-content: center;
+    }
+    .flow-step {
+      background: #0070b8;
+      color: #fff;
+      border-radius: 8px;
+      padding: 14px 18px;
+      min-width: 130px;
+      text-align: center;
+      font-size: .85rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .flow-arrow {
+      font-size: 1.4rem;
+      color: #0070b8;
+      padding: 0 6px;
+      flex-shrink: 0;
+    }
+    @media (max-width: 600px) {
+      .flow { flex-direction: column; }
+      .flow-arrow { transform: rotate(90deg); }
+    }
+
+    /* ── Tool badges ───────────────────────────────────────────────── */
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin: 28px 0;
+    }
+    .tool-card {
+      border: 1px solid #d0e4f5;
+      border-radius: 8px;
+      padding: 20px;
+      background: #f8fbff;
+    }
+    .tool-card h4 {
+      color: #003d6a;
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+    .tool-card p { font-size: .88rem; margin: 0; color: #445; }
+
+    /* ── Code blocks ───────────────────────────────────────────────── */
+    pre {
+      background: #1e2a38;
+      color: #cdd9e5;
+      border-radius: 6px;
+      padding: 20px 22px;
+      overflow-x: auto;
+      font-size: .82rem;
+      line-height: 1.6;
+      margin: 16px 0 24px;
+    }
+    code { font-family: 'Consolas', 'Courier New', monospace; }
+    p code, li code {
+      background: #eaf2fb;
+      color: #003d6a;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: .88em;
+    }
+
+    /* ── Steps list ────────────────────────────────────────────────── */
+    .steps { list-style: none; padding: 0; margin: 24px 0; counter-reset: step; }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 16px;
+      margin-bottom: 18px;
+      align-items: flex-start;
+    }
+    .steps li::before {
+      content: counter(step);
+      background: #0070b8;
+      color: #fff;
+      border-radius: 50%;
+      min-width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: .85rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    /* ── Table ─────────────────────────────────────────────────────── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0 28px;
+      font-size: .9rem;
+    }
+    th {
+      background: #003d6a;
+      color: #fff;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+    }
+    td { padding: 9px 14px; border-bottom: 1px solid #e0eaf4; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:nth-child(even) td { background: #f5f9fd; }
+
+    /* ── Status pills ──────────────────────────────────────────────── */
+    .pill {
+      display: inline-block;
+      border-radius: 12px;
+      padding: 2px 10px;
+      font-size: .8rem;
+      font-weight: 600;
+    }
+    .pill-green  { background: #d4edda; color: #155724; }
+    .pill-red    { background: #f8d7da; color: #721c24; }
+    .pill-orange { background: #ffecd2; color: #b45309; }
+
+    /* ── Links section ─────────────────────────────────────────────── */
+    .links-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+      margin: 20px 0;
+    }
+    .link-card {
+      border: 1px solid #d0e4f5;
+      border-radius: 6px;
+      padding: 14px 16px;
+      background: #f8fbff;
+      font-size: .88rem;
+    }
+    .link-card a { display: block; font-weight: 600; margin-bottom: 4px; }
+    .link-card span { color: #667; }
+
+    /* ── Footer ────────────────────────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 32px 20px;
+      color: #888;
+      font-size: .85rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     HERO
+═══════════════════════════════════════════════════════════════════ -->
+<div class="hero">
+  <div class="tag">SAP S/4HANA Cloud &nbsp;·&nbsp; Procurement Analytics</div>
+  <h1>Building a Real-Time PO DIFOT Report<br>in SAP S/4HANA Cloud Public Edition</h1>
+  <p>How we used ABAP CDS, OData V4, and SAP Fiori Elements to give procurement teams instant visibility into supplier delivery performance — without a single line of traditional ABAP.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     MAIN CONTENT
+═══════════════════════════════════════════════════════════════════ -->
+<div class="content container">
+
+  <!-- Table of Contents -->
+  <div class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#what-is-difot">What is DIFOT?</a></li>
+      <li><a href="#where-it-fits">Where DIFOT Fits in the Procurement Process</a></li>
+      <li><a href="#the-problem">The Problem This Project Solves</a></li>
+      <li><a href="#the-tools">The Tools We Used</a></li>
+      <li><a href="#architecture">Solution Architecture</a></li>
+      <li><a href="#how-it-works">How the Report Works</a></li>
+      <li><a href="#replication">Replicating This in Your System</a></li>
+      <li><a href="#links">Useful SAP Help Links</a></li>
+    </ol>
+  </div>
+
+  <!-- ── 1. WHAT IS DIFOT ─────────────────────────────────────────── -->
+  <h2 id="what-is-difot">1. What is DIFOT?</h2>
+
+  <p><strong>DIFOT</strong> stands for <strong>Delivered In Full, On Time</strong>. It is a supply chain performance metric that measures whether a supplier delivered <em>exactly what was ordered</em> and <em>when it was promised</em>.</p>
+
+  <p>A delivery only achieves a DIFOT score if it satisfies <em>both</em> conditions simultaneously:</p>
+
+  <div class="score-grid">
+    <div class="score-card sc-blue">
+      <div class="icon">📦</div>
+      <div class="label">In Full</div>
+      <div class="value">Qty GR ≥ Ordered</div>
+    </div>
+    <div class="score-card sc-blue">
+      <div class="icon">📅</div>
+      <div class="label">On Time</div>
+      <div class="value">GR Date ≤ Sched. Date</div>
+    </div>
+    <div class="score-card sc-green">
+      <div class="icon">✅</div>
+      <div class="label">Result: DIFOT</div>
+      <div class="value">Both met</div>
+    </div>
+    <div class="score-card sc-red">
+      <div class="icon">❌</div>
+      <div class="label">Result: NOT DIFOT</div>
+      <div class="value">Either or both failed</div>
+    </div>
+  </div>
+
+  <p>A third status, <span class="pill pill-orange">PENDING</span>, applies when no goods receipt has been posted yet — the PO item exists and has a scheduled delivery date, but the supplier has not yet delivered. This is equally important: it tells procurement exactly which open orders are overdue or at risk.</p>
+
+  <p>When a delivery fails DIFOT, the report also assigns a <strong>Failure Reason</strong>:</p>
+
+  <table>
+    <thead>
+      <tr><th>Failure Reason</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>SHORT</code></td><td>Quantity received was less than ordered. The delivery date was met but stock is short.</td></tr>
+      <tr><td><code>LATE</code></td><td>Full quantity was delivered but after the scheduled date.</td></tr>
+      <tr><td><code>SHORT AND LATE</code></td><td>Both quantity and date failed simultaneously.</td></tr>
+      <tr><td><em>blank</em></td><td>Delivery achieved DIFOT — no failure to report.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── 2. WHERE IT FITS ─────────────────────────────────────────── -->
+  <h2 id="where-it-fits">2. Where DIFOT Fits in the Procurement Process</h2>
+
+  <p>To appreciate why DIFOT matters, it helps to trace a purchase order from creation through to stock receipt:</p>
+
+  <div class="flow">
+    <div class="flow-step">Purchase<br>Requisition</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">Purchase<br>Order</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">Schedule<br>Lines &amp; Dates</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">Supplier<br>Ships</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">Goods<br>Receipt</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step"><strong>DIFOT<br>Scored</strong></div>
+  </div>
+
+  <p>At each purchase order item, SAP stores a set of <strong>schedule lines</strong> — each with a delivery date and an expected quantity. When goods arrive at the warehouse and a goods receipt is posted, SAP records the actual quantity and posting date against the PO. DIFOT compares these two sides: what was promised versus what was actually received.</p>
+
+  <p>DIFOT sits at the intersection of <strong>procurement</strong>, <strong>warehouse operations</strong>, and <strong>supplier management</strong>. It is commonly used to:</p>
+  <ul>
+    <li>Score and rank supplier performance for periodic business reviews</li>
+    <li>Identify systemic delivery problems with specific suppliers, materials, or plants</li>
+    <li>Provide objective evidence when renegotiating contracts or applying penalty clauses</li>
+    <li>Feed into broader supply chain KPIs and executive dashboards</li>
+    <li>Detect trends — for example, a supplier whose on-time rate is declining over consecutive months</li>
+  </ul>
+
+  <div class="callout callout-blue">
+    <p><strong>Industry context:</strong> DIFOT (also written as OTIF — On Time In Full — in some industries) is a standard KPI in retail, FMCG, automotive, and manufacturing supply chains. Retailers such as supermarket chains often impose financial penalties on suppliers whose DIFOT rates fall below a contractual threshold (commonly 95–98%).</p>
+  </div>
+
+  <!-- ── 3. THE PROBLEM ───────────────────────────────────────────── -->
+  <h2 id="the-problem">3. The Problem This Project Solves</h2>
+
+  <p>Despite DIFOT being a critical KPI, most SAP customers have historically struggled to get a clean, real-time view of it. The typical pain points are:</p>
+
+  <h3>No standard SAP report</h3>
+  <p>SAP S/4HANA does not ship a dedicated DIFOT report. Procurement teams typically cobble together answers from the <em>Purchase Order Monitor</em>, <em>GR/GI Slip</em> reports, and manual Excel spreadsheets — a process that is error-prone, slow, and inconsistent across users.</p>
+
+  <h3>Data is spread across multiple tables</h3>
+  <p>The data needed to score DIFOT lives in at least three separate areas of the SAP data model:</p>
+  <ul>
+    <li>PO header and item data (ordered quantity, supplier, delivery date) — <code>EKKO</code> / <code>EKPO</code></li>
+    <li>Schedule line dates — <code>EKET</code></li>
+    <li>Goods receipt history — <code>EKBE</code></li>
+  </ul>
+  <p>Joining and aggregating these correctly — especially netting GR reversals, handling split deliveries, and dealing with items that have no GR yet — requires careful logic that is easy to get wrong in ad-hoc reporting.</p>
+
+  <h3>No drill-down from summary to detail</h3>
+  <p>Even when a summary view exists, procurement staff need to drill into individual goods receipt movements to investigate discrepancies. A static report or flat extract does not support this.</p>
+
+  <h3>What this project delivers</h3>
+  <div class="callout callout-green">
+    <p>This project delivers a <strong>real-time, embedded Fiori List Report</strong> directly on the S/4HANA Cloud Fiori Launchpad. It reads live transactional data — no extracts, no overnight jobs, no spreadsheets. Procurement staff can filter by supplier, material, plant, DIFOT status, or failure reason, drill into any PO item to see all four DIFOT dimensions on an Object Page, and further drill into individual goods receipt lines to investigate the root cause of a failure.</p>
+  </div>
+
+  <!-- ── 4. THE TOOLS ─────────────────────────────────────────────── -->
+  <h2 id="the-tools">4. The Tools We Used</h2>
+
+  <div class="tool-grid">
+    <div class="tool-card">
+      <h4>SAP S/4HANA Cloud Public Edition</h4>
+      <p>The target system. All custom CDS views, service definitions, and the deployed Fiori app live here. We used the <strong>Developer Extensibility</strong> model, which allows custom ABAP Cloud development on top of released SAP APIs.</p>
+    </div>
+    <div class="tool-card">
+      <h4>ABAP Development Tools (ADT)</h4>
+      <p>Eclipse-based IDE for creating and activating CDS Data Definitions, Service Definitions, Service Bindings, IAM Apps, and Business Catalogs in the S/4HANA Cloud back-end.</p>
+    </div>
+    <div class="tool-card">
+      <h4>SAP Business Application Studio (BAS)</h4>
+      <p>SAP's cloud-based IDE (running on BTP) used to generate the Fiori Elements application from a template wizard, preview it against live data, and deploy it as a BSP application to the ABAP repository.</p>
+    </div>
+    <div class="tool-card">
+      <h4>SAP BTP (Business Technology Platform)</h4>
+      <p>Provides the BAS environment and the BTP destination that allows BAS to connect to and deploy into the S/4HANA Cloud system.</p>
+    </div>
+    <div class="tool-card">
+      <h4>ABAP CDS (Core Data Services)</h4>
+      <p>The primary development artefact. CDS views define the data model, join logic, aggregations, DIFOT calculations, and all Fiori UI annotations — no classical ABAP report or BAdI required.</p>
+    </div>
+    <div class="tool-card">
+      <h4>OData V4</h4>
+      <p>The service protocol. A Service Definition and Service Binding expose the CDS model as an OData V4 endpoint that BAS and the deployed Fiori app consume.</p>
+    </div>
+    <div class="tool-card">
+      <h4>SAP Fiori Elements</h4>
+      <p>The UI framework. Because all UI behaviour is driven by CDS annotations, the Fiori Elements List Report and Object Page are generated automatically — no custom JavaScript or UI5 coding.</p>
+    </div>
+    <div class="tool-card">
+      <h4>Released SAP APIs</h4>
+      <p>All data access uses released, stable <code>I_*</code> CDS views (<code>I_PurchaseOrderItemAPI01</code>, <code>I_PurchaseOrderHistoryAPI01</code>, etc.) — no direct table access, ensuring upgrade compatibility.</p>
+    </div>
+  </div>
+
+  <!-- ── 5. ARCHITECTURE ──────────────────────────────────────────── -->
+  <h2 id="architecture">5. Solution Architecture</h2>
+
+  <p>The solution is built in layers. Each layer has a single responsibility and feeds the next:</p>
+
+  <div class="arch-diagram">
+    <svg width="780" height="340" viewBox="0 0 780 340" xmlns="http://www.w3.org/2000/svg" font-family="Segoe UI,Arial,sans-serif" font-size="12">
+
+      <!-- Released SAP API layer -->
+      <rect x="10" y="10" width="760" height="60" rx="6" fill="#e3f2fd" stroke="#90caf9" stroke-width="1.5"/>
+      <text x="390" y="30" text-anchor="middle" fill="#0d47a1" font-weight="700" font-size="11">Released SAP APIs (Read-Only — Upgrade-Safe)</text>
+      <rect x="30"  y="40" width="130" height="22" rx="4" fill="#bbdefb" stroke="#64b5f6" stroke-width="1"/>
+      <text x="95"  y="55" text-anchor="middle" fill="#0d47a1" font-size="10">I_PurchaseOrderItemAPI01</text>
+      <rect x="170" y="40" width="120" height="22" rx="4" fill="#bbdefb" stroke="#64b5f6" stroke-width="1"/>
+      <text x="230" y="55" text-anchor="middle" fill="#0d47a1" font-size="10">I_PurchaseOrderAPI01</text>
+      <rect x="300" y="40" width="140" height="22" rx="4" fill="#bbdefb" stroke="#64b5f6" stroke-width="1"/>
+      <text x="370" y="55" text-anchor="middle" fill="#0d47a1" font-size="10">I_PurOrdScheduleLineAPI01</text>
+      <rect x="450" y="40" width="150" height="22" rx="4" fill="#bbdefb" stroke="#64b5f6" stroke-width="1"/>
+      <text x="525" y="55" text-anchor="middle" fill="#0d47a1" font-size="10">I_PurchaseOrderHistoryAPI01</text>
+      <rect x="610" y="40" width="145" height="22" rx="4" fill="#bbdefb" stroke="#64b5f6" stroke-width="1"/>
+      <text x="682" y="55" text-anchor="middle" fill="#0d47a1" font-size="10">I_POSupplierConfirmationAPI01</text>
+
+      <!-- Arrows down from APIs -->
+      <line x1="95"  y1="62" x2="95"  y2="100" stroke="#90caf9" stroke-width="1.5" stroke-dasharray="4,2"/>
+      <line x1="230" y1="62" x2="230" y2="100" stroke="#90caf9" stroke-width="1.5" stroke-dasharray="4,2"/>
+      <line x1="370" y1="62" x2="320" y2="100" stroke="#90caf9" stroke-width="1.5" stroke-dasharray="4,2"/>
+      <line x1="525" y1="62" x2="510" y2="100" stroke="#90caf9" stroke-width="1.5" stroke-dasharray="4,2"/>
+      <line x1="525" y1="62" x2="600" y2="100" stroke="#90caf9" stroke-width="1.5" stroke-dasharray="4,2"/>
+      <line x1="682" y1="62" x2="390" y2="158" stroke="#90caf9" stroke-width="1.5" stroke-dasharray="4,2"/>
+
+      <!-- Aggregation layer -->
+      <rect x="200" y="100" width="140" height="44" rx="6" fill="#e8f5e9" stroke="#a5d6a7" stroke-width="1.5"/>
+      <text x="270" y="118" text-anchor="middle" fill="#1b5e20" font-weight="600" font-size="11">ZC_PRPOSched</text>
+      <text x="270" y="133" text-anchor="middle" fill="#1b5e20" font-size="10">LineSummary</text>
+
+      <rect x="430" y="100" width="140" height="44" rx="6" fill="#e8f5e9" stroke="#a5d6a7" stroke-width="1.5"/>
+      <text x="500" y="118" text-anchor="middle" fill="#1b5e20" font-weight="600" font-size="11">ZC_PRPOItem</text>
+      <text x="500" y="133" text-anchor="middle" fill="#1b5e20" font-size="10">GRSummary</text>
+
+      <rect x="598" y="100" width="150" height="44" rx="6" fill="#e8f5e9" stroke="#a5d6a7" stroke-width="1.5"/>
+      <text x="673" y="118" text-anchor="middle" fill="#1b5e20" font-weight="600" font-size="11">ZC_PRPOGR</text>
+      <text x="673" y="133" text-anchor="middle" fill="#1b5e20" font-size="10">HistoryLines</text>
+
+      <!-- Arrows to core calc -->
+      <line x1="95"  y1="62"  x2="350" y2="158" stroke="#90caf9" stroke-width="1.5" stroke-dasharray="4,2"/>
+      <line x1="230" y1="62"  x2="360" y2="158" stroke="#90caf9" stroke-width="1.5" stroke-dasharray="4,2"/>
+      <line x1="270" y1="144" x2="360" y2="158" stroke="#66bb6a" stroke-width="1.5"/>
+      <line x1="500" y1="144" x2="400" y2="158" stroke="#66bb6a" stroke-width="1.5"/>
+
+      <!-- Core calc view -->
+      <rect x="280" y="158" width="200" height="44" rx="6" fill="#fff3e0" stroke="#ffb74d" stroke-width="2"/>
+      <text x="380" y="176" text-anchor="middle" fill="#e65100" font-weight="700" font-size="12">ZC_PRPODIFOT</text>
+      <text x="380" y="193" text-anchor="middle" fill="#e65100" font-size="10">Core DIFOT Calculation</text>
+
+      <!-- Arrow to consumption view -->
+      <line x1="380" y1="202" x2="380" y2="230" stroke="#ffb74d" stroke-width="2"/>
+      <polygon points="374,228 386,228 380,236" fill="#ffb74d"/>
+
+      <!-- GRHistoryLines arrow to consumption -->
+      <line x1="673" y1="144" x2="500" y2="230" stroke="#66bb6a" stroke-width="1.5"/>
+
+      <!-- Consumption view -->
+      <rect x="270" y="236" width="220" height="44" rx="6" fill="#fce4ec" stroke="#f48fb1" stroke-width="2"/>
+      <text x="380" y="254" text-anchor="middle" fill="#880e4f" font-weight="700" font-size="12">ZC_PRPODIFOT_C</text>
+      <text x="380" y="270" text-anchor="middle" fill="#880e4f" font-size="10">UI Annotations + Navigation</text>
+
+      <!-- Arrow to OData -->
+      <line x1="490" y1="258" x2="560" y2="258" stroke="#9c27b0" stroke-width="2"/>
+      <polygon points="558,252 570,258 558,264" fill="#9c27b0"/>
+
+      <!-- OData service -->
+      <rect x="570" y="236" width="180" height="44" rx="6" fill="#f3e5f5" stroke="#ce93d8" stroke-width="2"/>
+      <text x="660" y="254" text-anchor="middle" fill="#6a1b9a" font-weight="700" font-size="11">ZC_PRPODIFOT_SRV</text>
+      <text x="660" y="270" text-anchor="middle" fill="#6a1b9a" font-size="10">OData V4 Service Binding</text>
+
+      <!-- Arrow to Fiori -->
+      <line x1="660" y1="280" x2="660" y2="300" stroke="#9c27b0" stroke-width="2"/>
+      <polygon points="654,298 666,298 660,308" fill="#9c27b0"/>
+
+      <!-- Fiori app -->
+      <rect x="490" y="308" width="340" height="26" rx="6" fill="#0070b8"/>
+      <text x="660" y="325" text-anchor="middle" fill="#fff" font-weight="700" font-size="12">Fiori Elements List Report + Object Page</text>
+
+      <!-- Value help boxes -->
+      <rect x="10" y="236" width="130" height="22" rx="4" fill="#f1f8e9" stroke="#aed581" stroke-width="1"/>
+      <text x="75" y="251" text-anchor="middle" fill="#33691e" font-size="10">DIFOTStatusVH</text>
+      <rect x="10" y="264" width="130" height="22" rx="4" fill="#f1f8e9" stroke="#aed581" stroke-width="1"/>
+      <text x="75" y="279" text-anchor="middle" fill="#33691e" font-size="10">DIFOTFailReasonVH</text>
+      <line x1="140" y1="247" x2="270" y2="258" stroke="#aed581" stroke-width="1" stroke-dasharray="3,2"/>
+      <line x1="140" y1="275" x2="270" y2="265" stroke="#aed581" stroke-width="1" stroke-dasharray="3,2"/>
+
+    </svg>
+  </div>
+
+  <h3>Layer responsibilities</h3>
+  <table>
+    <thead><tr><th>Layer</th><th>Object(s)</th><th>Responsibility</th></tr></thead>
+    <tbody>
+      <tr><td>Released APIs</td><td><code>I_PurchaseOrderItemAPI01</code>, <code>I_PurchaseOrderHistoryAPI01</code>, etc.</td><td>Stable, upgrade-safe access to PO, GR, and schedule line data. No direct table access anywhere in this solution.</td></tr>
+      <tr><td>Aggregation</td><td><code>ZC_PRPOItemGRSummary</code><br><code>ZC_PRPOSchedLineSummary</code></td><td>Aggregate GR quantities (netting reversals) and scheduled delivery dates per PO item. Isolate aggregation logic so it can be reused.</td></tr>
+      <tr><td>GR Detail</td><td><code>ZC_PRPOGRHistoryLines</code></td><td>Individual (non-aggregated) GR lines — used exclusively as a navigation target for the Object Page drill-down table.</td></tr>
+      <tr><td>Core Calculation</td><td><code>ZC_PRPODIFOT</code></td><td>Join all inputs; calculate <code>QuantityVariance</code>, <code>DateVarianceInDays</code>, <code>IsDeliveredInFull</code>, <code>IsDeliveredOnTime</code>, <code>DIFOTStatus</code>, and <code>DIFOTFailureReason</code>.</td></tr>
+      <tr><td>Value Helps</td><td><code>ZC_PRPODIFOTStatusVH</code><br><code>ZC_PRPODIFOTFailReasonVH</code></td><td>Fixed-value lists for the DIFOT Status and Failure Reason filter dropdowns. No database table needed — values are defined inline in CDS.</td></tr>
+      <tr><td>Consumption</td><td><code>ZC_PRPODIFOT_C</code></td><td>Adds all Fiori UI annotations (<code>@UI.lineItem</code>, <code>@UI.fieldGroup</code>, <code>@UI.facet</code>, value helps, criticality) and declares the navigation association to <code>ZC_PRPOGRHistoryLines</code>.</td></tr>
+      <tr><td>Service</td><td><code>ZC_PRPODIFOT_SRV</code> / <code>ZC_PRPODIFOT_UI_V4</code></td><td>Expose the consumption view and GR history lines as an OData V4 service accessible to BAS and the deployed Fiori app.</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ── 6. HOW IT WORKS ──────────────────────────────────────────── -->
+  <h2 id="how-it-works">6. How the Report Works</h2>
+
+  <h3>The List Report</h3>
+  <p>When a user opens the app, they see a Fiori Elements <strong>List Report</strong> with a Smart Filter Bar at the top. The filter bar exposes the most useful search dimensions — Purchase Order, Supplier, Material, Plant, Material Group, DIFOT Status (dropdown), Failure Reason (dropdown), and Earliest Scheduled Delivery Date.</p>
+
+  <p>After clicking <strong>Go</strong>, the table populates with one row per PO item. The key columns are:</p>
+
+  <table>
+    <thead><tr><th>Column</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>Ordered Qty</td><td>Quantity on the PO item</td></tr>
+      <tr><td>GR Quantity</td><td>Net goods receipts posted (reversals already netted off)</td></tr>
+      <tr><td>Qty Variance</td><td>GR Qty minus Ordered Qty — negative means short delivery</td></tr>
+      <tr><td>Sched Del. Date</td><td>Latest scheduled delivery date from the PO schedule lines</td></tr>
+      <tr><td>Latest GR Date</td><td>Date the most recent goods receipt was posted</td></tr>
+      <tr><td>Date Var. (Days)</td><td>Days between scheduled and actual — positive means late</td></tr>
+      <tr><td>In Full?</td><td>Tick if quantity met</td></tr>
+      <tr><td>On Time?</td><td>Tick if date met</td></tr>
+      <tr><td>DIFOT Status</td><td><span class="pill pill-green">DIFOT</span> &nbsp; <span class="pill pill-red">NOT DIFOT</span> &nbsp; <span class="pill pill-orange">PENDING</span> — colour-coded with icon</td></tr>
+      <tr><td>Failure Reason</td><td>SHORT / LATE / SHORT AND LATE / blank</td></tr>
+    </tbody>
+  </table>
+
+  <h3>The Object Page drill-down</h3>
+  <p>Clicking any row opens an <strong>Object Page</strong> with four tabs:</p>
+  <ul>
+    <li><strong>PO Details</strong> — supplier, company code, purchasing org/group, material, plant, net price, etc.</li>
+    <li><strong>DIFOT Details</strong> — the four DIFOT fields and failure reason, displayed with criticality colouring</li>
+    <li><strong>Schedule &amp; GR</strong> — scheduled quantities and dates, total GR quantity, first and latest GR dates, supplier confirmations</li>
+    <li><strong>Goods Receipt Lines</strong> — every individual GR and reversal movement (material document, movement type, posting date, quantity, amount), making it easy to trace exactly what arrived and when</li>
+  </ul>
+
+  <h3>The DIFOT logic in brief</h3>
+  <pre><code>-- Delivered In Full:
+IsDeliveredInFull = 'X'  when  TotalGRQuantity >= OrderQuantity
+
+-- Delivered On Time:
+IsDeliveredOnTime = 'X'  when  LatestGRPostingDate <= LatestSchedDelivDate
+
+-- Overall Status:
+DIFOTStatus = 'PENDING'   when no GR has been posted
+DIFOTStatus = 'DIFOT'     when both InFull AND OnTime
+DIFOTStatus = 'NOT DIFOT' otherwise
+
+-- Failure Reason:
+DIFOTFailureReason = 'SHORT AND LATE'  when short AND late
+DIFOTFailureReason = 'SHORT'           when short only
+DIFOTFailureReason = 'LATE'            when late only
+DIFOTFailureReason = ''                when DIFOT or PENDING</code></pre>
+
+  <div class="callout callout-amber">
+    <p><strong>Design decision — split deliveries:</strong> Where a PO item has multiple schedule lines, we compare against the <em>latest</em> scheduled delivery date. This avoids false DIFOT failures on split deliveries — a supplier who delivers the full quantity by the last scheduled line date is scored as on time.</p>
+  </div>
+
+  <!-- ── 7. REPLICATION ───────────────────────────────────────────── -->
+  <h2 id="replication">7. Replicating This in Your System</h2>
+
+  <div class="callout callout-blue">
+    <p><strong>Prerequisites:</strong> You need an S/4HANA Cloud Public Edition system with developer extensibility enabled, ADT (Eclipse) connected to your system, a SAP Fiori Dev Space in BAS, and a BTP destination pointing to your S/4HANA Cloud system. Your user needs business catalogs <code>SAP_A4C_BC_DEV_UID_PC</code>, <code>SAP_CORE_BC_EXT_TST</code>, and <code>SAP_A4C_BC_DEV_PC</code> assigned.</p>
+  </div>
+
+  <p>The implementation follows a strict activation order because each CDS view depends on the ones below it. The full sequence is:</p>
+
+  <h3>Phase 1 — Build the CDS layer in ADT</h3>
+
+  <ol class="steps">
+    <li>
+      <div>
+        <strong>Create a custom package</strong> in ADT (e.g. <code>ZPURCHASING</code>). Assign it to a transport request. All subsequent objects go into this package.
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Create <code>ZC_PRPOItemGRSummary</code></strong> — aggregates net GR quantities per PO item from <code>I_PurchaseOrderHistoryAPI01</code>. Filters on <code>PurchasingHistoryCategory = 'E'</code> and movement types <code>101</code>/<code>102</code>; uses <code>DebitCreditCode</code> to net reversals. Produces <code>TotalGRQuantity</code>, <code>FirstGRPostingDate</code>, <code>LatestGRPostingDate</code>.
+        <pre><code>define view ZC_PRPOItemGRSummary
+  as select from I_PurchaseOrderHistoryAPI01
+{
+  key PurchaseOrder,
+  key PurchaseOrderItem,
+  sum( case DebitCreditCode
+         when 'S' then Quantity
+         when 'H' then -Quantity
+         else 0
+       end )              as TotalGRQuantity,
+  max( PostingDate )      as LatestGRPostingDate,
+  min( case DebitCreditCode when 'S' then PostingDate end )
+                          as FirstGRPostingDate
+}
+where PurchasingHistoryCategory = 'E'
+  and ( GoodsMovementType = '101' or GoodsMovementType = '102' )
+group by PurchaseOrder, PurchaseOrderItem</code></pre>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Create <code>ZC_PRPOSchedLineSummary</code></strong> — aggregates schedule line data from <code>I_PurOrdScheduleLineAPI01</code>. Takes <code>MIN</code> and <code>MAX</code> of delivery dates to capture the delivery window; uses <code>MAX</code> (latest date) for the DIFOT on-time comparison.
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Create <code>ZC_PRPODIFOT</code></strong> — the core calculation view. Joins the two aggregation views with <code>I_PurchaseOrderItemAPI01</code>, <code>I_PurchaseOrderAPI01</code>, and <code>I_POSupplierConfirmationAPI01</code> (left outer). Calculates all six DIFOT fields using <code>CASE</code> expressions and <code>DATS_DAYS_BETWEEN</code> for date variance.
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Create <code>ZC_PRPOGRHistoryLines</code></strong> — individual (non-aggregated) GR lines from <code>I_PurchaseOrderHistoryAPI01</code>. Same filter scope as the summary view. This is used purely as a navigation target for the Object Page GR Lines tab.
+        <br><strong>Must be activated before <code>ZC_PRPODIFOT_C</code>.</strong>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Create <code>ZC_PRPODIFOTStatusVH</code></strong> — fixed-value list for the DIFOT Status filter dropdown. Uses an inline CDS <code>VALUES</code> clause — no database table needed.
+        <br><strong>Must be activated before <code>ZC_PRPODIFOT_C</code>.</strong>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Create <code>ZC_PRPODIFOTFailReasonVH</code></strong> — fixed-value list for the Failure Reason filter dropdown (four values: blank, SHORT, LATE, SHORT AND LATE).
+        <br><strong>Must be activated before <code>ZC_PRPODIFOT_C</code>.</strong>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Create <code>ZC_PRPODIFOT_C</code></strong> — the consumption view. Selects from <code>ZC_PRPODIFOT</code>, adds all <code>@UI.*</code> annotations for the List Report and Object Page, declares the <code>_GRLines</code> navigation association, wires up all value helps, and computes the <code>DIFOTCriticality</code> virtual field (1=red, 2=orange, 3=green) that drives the colour coding on <code>DIFOTStatus</code>.
+      </div>
+    </li>
+  </ol>
+
+  <h3>Phase 2 — Create the OData V4 service in ADT</h3>
+
+  <ol class="steps">
+    <li>
+      <div>
+        <strong>Create Service Definition <code>ZC_PRPODIFOT_SRV</code></strong> — exposes <code>ZC_PRPODIFOT_C</code> as <code>PODIFOTItem</code> and <code>ZC_PRPOGRHistoryLines</code> as <code>POGRHistoryLine</code>.
+        <pre><code>define service ZC_PRPODIFOT_SRV {
+  expose ZC_PRPODIFOT_C        as PODIFOTItem;
+  expose ZC_PRPOGRHistoryLines as POGRHistoryLine;
+}</code></pre>
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Create Service Binding <code>ZC_PRPODIFOT_UI_V4</code></strong> — binding type <strong>OData V4 - UI</strong>. After activating, click <strong>Publish Local Service Endpoint</strong> in the binding editor. At this point you can already preview the app directly from ADT.
+      </div>
+    </li>
+  </ol>
+
+  <h3>Phase 3 — Deploy the Fiori app from BAS</h3>
+
+  <ol class="steps">
+    <li>
+      <div>
+        <strong>Configure a BTP destination</strong> pointing to your S/4HANA Cloud system (name: <code>SAP_Business_Application_Studio</code>, properties <code>WebIDEEnabled=true</code>, <code>WebIDESystem=ABAP</code>, <code>WebIDEUsage=odata_abap,dev_abap,abap_cloud</code>).
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Generate the Fiori app in BAS</strong> using the <strong>List Report Page</strong> template. In the wizard: connect to your system, select <code>ZC_PRPODIFOT_SRV (OData V4)</code>, choose <code>PODIFOTItem</code> as the main entity. Set module name <code>zc_prpodifot</code>, deployment target ABAP (package <code>ZPURCHASING</code>), and FLP semantic object <code>ZPRPODifot</code> / action <code>display</code>.
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Preview</strong> the generated app in BAS against live data to verify it renders correctly before deploying.
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Deploy</strong> by running <code>npm run deploy</code> in the BAS terminal. This creates a BSP application (<code>WAPA</code>) and a Launchpad App Descriptor Item (<code>UIAD</code>) in your ABAP repository.
+      </div>
+    </li>
+  </ol>
+
+  <h3>Phase 4 — Grant access and expose the tile</h3>
+
+  <ol class="steps">
+    <li>
+      <div>
+        <strong>Create an IAM App <code>ZC_PRPODIFOT_TILE</code> in ADT</strong> — App Type <code>EXT_UI</code>, link it to the UIAD created by BAS, add the OData V4 service on the Services tab. Publish Locally.
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Create a Business Catalog <code>ZC_PRPODIFOT_BC</code> in ADT</strong> — add the IAM App to the Apps tab. Publish Locally.
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Create a Business Role</strong> in the <em>Maintain Business Roles</em> Fiori app. Add the Business Catalog. Grant Read and Value Help access.
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Assign the role to your user</strong> in the <em>Maintain Business Users</em> app. Log out and back in.
+      </div>
+    </li>
+    <li>
+      <div>
+        <strong>Pin the tile</strong> via App Finder on the Launchpad home page. Search for <em>PO DIFOT</em> and pin it.
+      </div>
+    </li>
+  </ol>
+
+  <div class="callout callout-green">
+    <p><strong>All CDS source files and detailed step-by-step instructions are maintained in two companion files:</strong><br>
+    <code>INSTRUCTIONS.md</code> — the complete ADT build guide (all 10 steps)<br>
+    <code>INSTRUCTIONS_BAS.md</code> — the BAS deployment and Launchpad exposure guide</p>
+  </div>
+
+  <!-- ── 8. LINKS ─────────────────────────────────────────────────── -->
+  <h2 id="links">8. Useful SAP Help Links</h2>
+
+  <div class="links-grid">
+    <div class="link-card">
+      <a href="https://help.sap.com/docs/SAP_S4HANA_CLOUD/6aa39f1ac05441e5a23f484f31e477e7/2a4ae231df8843379df7a36fa3462d4c.html?version=2602.500" target="_blank">Develop an SAP Fiori Application UI</a>
+      <span>Official S/4HANA Cloud Public Edition 2602 guide — covers BAS app generation, deployment, IAM App and Business Catalog creation in ADT.</span>
+    </div>
+    <div class="link-card">
+      <a href="https://help.sap.com/docs/SAP_S4HANA_CLOUD/0f69f8fb28ac4bf48d2b57b9637e81fa/533228e1e854433ab16d013f161ca509.html?version=2602.500" target="_blank">Extensibility in S/4HANA Cloud Public Edition</a>
+      <span>Overview of Key User Extensibility vs Developer Extensibility and when to use each.</span>
+    </div>
+    <div class="link-card">
+      <a href="https://help.sap.com/docs/SAP_S4HANA_CLOUD/6aa39f1ac05441e5a23f484f31e477e7/e1059ff581854a699f15734049f14293.html?version=2602.500" target="_blank">Developer Extensibility</a>
+      <span>What Developer Extensibility provides, prerequisites, and limitations in S/4HANA Cloud Public Edition.</span>
+    </div>
+    <div class="link-card">
+      <a href="https://help.sap.com/docs/SAP_S4HANA_CLOUD/6aa39f1ac05441e5a23f484f31e477e7/412743ca95764517b0f5205bbdcf020b.html?version=2602.500" target="_blank">SAPUI5 Adaptation Projects in BAS</a>
+      <span>Extending existing SAP Fiori apps via adaptation projects — a complement to building new apps.</span>
+    </div>
+    <div class="link-card">
+      <a href="https://help.sap.com/docs/SAP_FIORI_tools/17d50220bcd848aa854c9c182d65b699/f4881a9b9141430dba1c6a76e7f456dc.html" target="_blank">SAP Fiori Tools — Extending Fiori Apps</a>
+      <span>BAS Fiori Tools documentation including the Fiori application generator and deployment configuration.</span>
+    </div>
+    <div class="link-card">
+      <a href="https://learning.sap.com/learning-journeys/develop-sapui5-applications" target="_blank">SAP Learning — Develop SAPUI5 Applications</a>
+      <span>Free SAP Learning Journey covering Fiori Elements, CDS annotations, and OData service development.</span>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<footer>
+  <p>Built on SAP S/4HANA Cloud Public Edition · ABAP CDS · OData V4 · SAP Fiori Elements · BAS</p>
+</footer>
+
+</body>
+</html>
