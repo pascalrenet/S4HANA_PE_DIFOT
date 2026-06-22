@@ -231,13 +231,34 @@ I suggest the following resources:
 1. Open the Service Binding `ZC_PRPODIFOT_UI_V4` you create in step 8b
 2. In the right pane `Service Version Details`, locate the button `Create a SAP Fiori Application` and click it
 ![Quick Create Fiori Application](imagery/createFioriApp.png)
+3. Select the option `Create SAP Fiori app with Quick Fiori Application generator in ADT` and click **Create**
+![Quick Create in ADT](imagery/quickCreate.png)
+4. Enter the details required to generate the object
+   - **Package**: `ZPURCHASING`
+   - **Referenced Object**: The service Binding `ZC_PRPODIFOT_UI_V4`
+5. Click **Next**
+6. Enter the Generator details as in the image below
+![Generator](imagery/generatorDetails.png)
+7. View ABAP Artifacts Generation List 
+![Generator](imagery/abapArtifacts.png)
+8. Click **Next**, assign the transport request → **Finish**.
+9. You should receive a success generation message
+![Generator](imagery/appSuccess.png)
+10. This will update the Fiori App URL in the service Binding
+![Generator](imagery/fioriAppUrl.png)
+
+
+### Step 9b — If you are using BAS (SAP Business Application Studio)
+I suggest you follow the Developer learning journey and follow the tutorial [Develop a Custom UI for an SAP S/4HANA Cloud System](https://developers.sap.com/tutorials/abap-custom-ui-bas-develop-s4hc.html). You also have this Developer tutorial that will show you how to create a Destination in BTP to connect to your SAP S/4HANA Cloud system [Connect SAP Business Application Studio and SAP S/4HANA Cloud System](https://developers.sap.com/tutorials/abap-custom-ui-bas-connect-s4hc.html).
+
+This path I will not elaborate on, as the above tutorials are quite explicit.
 
 
 ## Step 10 — Create the IAM App and Business Catalog in ADT
 
 You must create an IAM App (which links the Fiori UI to the OData service) and a Business Catalog (which groups apps for role assignment) in ADT.
 
-### Step 9a — Create the IAM App
+### Step 10a — Create the IAM App
 
 1. In ADT, right-click your package `ZPURCHASING` → **New → Other ABAP Repository Object**.
 2. Under **Identity and Access Management**, select **IAM App** → **Next**.
@@ -245,16 +266,18 @@ You must create an IAM App (which links the Fiori UI to the OData service) and a
    - **Name**: `ZC_PRPODIFOT_TILE`
    - **Description**: `PO Item DIFOT`
    - **Application Type**: `External App`
+![Create IAM App](imagery/appTile.png)
 4. Click **Next**, assign the transport request → **Finish**.
 5. In the IAM App editor, **Overview** tab:
    - **Fiori Launchpad App Descr Item ID**: `ZPODIFOT_UI5R` enter the UIAD object name created during the deployment — this is `ZPODIFOT_UI5R` (check in ADT under your package → Fiori User Interface → Launchpad App Descriptor Items if unsure)
+![App Descriptor](imagery/appDescriptor.png)
 6. Go to the **Services** tab → **Add**:
    - **Service Type**: `OData V4`
    - **Service Name**: `ZC_PRPODIFOT_UI_V4` *(technical name from your service binding editor)*
 7. **Save** and .
 8. Click **Publish Locally**.
 
-### Step 9b — Create the Business Catalog
+### Step 10b — Create the Business Catalog
 
 1. Right-click your package `ZPURCHASING` → **New → Other ABAP Repository Object**.
 2. Under **Cloud Identity and Access Management**, select **Business Catalog** → **Next**.
@@ -283,11 +306,14 @@ You must create an IAM App (which links the Fiori UI to the OData service) and a
 1. Launch the **Maintain Business Users** app.
 2. Find your user → **Assigned Business Roles** → **Add** → select the role from Stage 3.
 3. **Save**.
-4. Log out and back in to the Launchpad.
+4. Refresh your browser to reload the business role.
 
 ---
 
 ### Step 12 — Pin the Tile to your Home Page
+
+I would suggest you create a dedidcated Fiori Launchpad Space and Page
+
 
 1. On the Launchpad home page, click the **pencil (Edit)** icon.
 2. Click **App Finder**.
