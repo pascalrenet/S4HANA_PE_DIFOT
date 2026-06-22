@@ -223,7 +223,17 @@ S/4HANA Cloud Public Edition requires an explicit service definition and binding
 
 To create the Fiori app per se, you can either use ADT itself, or you can use SAP BAS (Business Application Studio)
 
-## Step 9 — Create the IAM App and Business Catalog in ADT
+### Step 9a — If you are using ADT
+I suggest the following resources:
+- [Quickly Generate and Deploy SAP Fiori Apps from ABAP Development Tools for Eclipse](https://community.sap.com/t5/application-development-and-automation-blog-posts/quickly-generate-and-deploy-sap-fiori-apps-from-abap-development-tools-for/ba-p/14116822)
+- [Creating SAP Fiori App Using Quick Fiori Application Generator](https://help.sap.com/docs/abap-cloud/abap-development-tools-user-guide/creating-sap-fiori-app-using-quick-fiori-application-generator?locale=en-US)
+
+1. Open the Service Binding `ZC_PRPODIFOT_UI_V4` you create in step 8b
+2. In the right pane `Service Version Details`, locate the button `Create a SAP Fiori Application` and click it
+![Quick Create Fiori Application](imagery/createFioriApp.png)
+
+
+## Step 10 — Create the IAM App and Business Catalog in ADT
 
 You must create an IAM App (which links the Fiori UI to the OData service) and a Business Catalog (which groups apps for role assignment) in ADT.
 
