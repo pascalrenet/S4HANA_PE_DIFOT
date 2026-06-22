@@ -325,4 +325,19 @@ I would suggest you create a dedidcated Fiori Launchpad Space and Page
 ---
 
 
+### Running the App
 
+All things running smoothly, you should at the end be able to launch the App, which will provide you a list page with a drill down to an object page, specific to a selected purchase order item.
+
+In terms of presentation yo will have a large number of filters at your disposal, with most having a value help to help you search for data, based on data that exists in your system. Some custom value help filters have also been added to help you filter on the custom DIFOT fields introduced in this report.
+
+![Report Filters](imagery/filters.png)
+
+Once you execute the report the main list will be presented with data corresponding to your search criteria, including various DIFOT values and indicators, colour coded.
+have also been added to help you filter on the custom DIFOT fields introduced in this report.
+
+![List Report](imagery/listReport.png)
+
+Clciking a specific line, will then drill down to an object page with data specific to the selected purchase order  item line, including the purchase order history, limited to goods movements. This may help you to understand goods receipts and cancellations.
+
+![Object Page](imagery/objectPage.png)
