@@ -40,7 +40,7 @@ project root/
 │   ├── ZC_PRPODIFOTStatusVH.asddls
 │   ├── ZC_PRPODIFOTFailReasonVH.asddls
 │   └── ZC_PRPODIFOT_C.asddls
-├── service/                 ← service definition (.asdefs) file
+└──  service/                 ← service definition (.asdefs) file
     └── ZC_PRPODIFOT_SRV.asdefs
 
 ```
