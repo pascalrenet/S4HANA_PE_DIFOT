@@ -41,13 +41,8 @@ project root/
 │   ├── ZC_PRPODIFOTFailReasonVH.asddls
 │   └── ZC_PRPODIFOT_C.asddls
 ├── service/                 ← service definition (.asdefs) file
-│   └── ZC_PRPODIFOT_SRV.asdefs
-└── docs/                    ← API reference documentation
-    ├── I_PurchaseOrderItemAPI01.md
-    ├── I_PurchaseOrderAPI01.md
-    ├── I_PurchaseOrderHistoryAPI01.md
-    ├── I_PurchaseOrderItemMonitor.md
-    └── I_PurOrdScheduleLineAPI01.md
+    └── ZC_PRPODIFOT_SRV.asdefs
+
 ```
 
 ---
