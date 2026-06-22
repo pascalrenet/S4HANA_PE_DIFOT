@@ -19,7 +19,7 @@ define view ZC_PRPOItemGRSummary
   key PurchaseOrderItem,
 
       @EndUserText.label: 'Total GR Quantity (PO UoM)'
-      @Semantics.quantity.unitOfMeasure: 'PurchaseOrderQuantiyUnit'
+      @Semantics.quantity.unitOfMeasure: 'PurchaseOrderQuantityUnit'
       sum( case DebitCreditCode
              when 'S' then Quantity   -- debit = goods receipt
              when 'H' then -Quantity  -- credit = reversal
@@ -27,7 +27,7 @@ define view ZC_PRPOItemGRSummary
            end ) as TotalGRQuantity,
 
       @EndUserText.label: 'PO Quantity Unit'
-      max( PurchaseOrderQuantityUnit )    as PurchaseOrderQuantiyUnit,
+      max( PurchaseOrderQuantityUnit )    as PurchaseOrderQuantityUnit,
 
       @EndUserText.label: 'Latest GR Posting Date'
       max( PostingDate )                  as LatestGRPostingDate,

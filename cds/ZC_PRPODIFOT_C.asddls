@@ -60,20 +60,29 @@ define view ZC_PRPODIFOT_C
   Supplier,
 
   @UI.fieldGroup: [{ qualifier: 'PODetails', position: 20 }]
+  @Consumption.valueHelpDefinition: [{ entity: { name: 'I_CompanyCodeStdVH', element: 'CompanyCode' } }]
   CompanyCode,
 
   @UI.selectionField: [{ position: 40 }]
   @UI.fieldGroup:     [{ qualifier: 'PODetails', position: 30 }]
+  @Consumption.valueHelpDefinition: [{ entity: { name: 'I_PurchasingOrganization', element: 'PurchasingOrganization' } }]
   PurchasingOrganization,
+
+  @UI.selectionField: [{ position: 45 }]
+  @UI.fieldGroup:     [{ qualifier: 'PODetails', position: 35 }]
+  @Consumption.valueHelpDefinition: [{ entity: { name: 'I_PurchaseOrderType', element: 'PurchaseOrderType' } }]
+  PurchaseOrderType,
 
   @UI.selectionField: [{ position: 50 }]
   @UI.fieldGroup:     [{ qualifier: 'PODetails', position: 40 }]
+  @Consumption.valueHelpDefinition: [{ entity: { name: 'I_PurchasingGroup', element: 'PurchasingGroup' } }]
   PurchasingGroup,
 
   @UI.fieldGroup: [{ qualifier: 'PODetails', position: 50 }]
   PurchaseOrderDate,
 
   @UI.fieldGroup: [{ qualifier: 'PODetails', position: 60 }]
+  @Consumption.valueHelpDefinition: [{ entity: { name: 'I_CurrencyStdVH', element: 'Currency' } }]
   DocumentCurrency,
 
   /* ── PO Item Fields ────────────────────────────────────────── */
@@ -92,6 +101,7 @@ define view ZC_PRPODIFOT_C
   @UI.selectionField: [{ position: 75 }]
   @UI.lineItem:       [{ position: 60, importance: #MEDIUM, label: 'Material Group' }]
   @UI.fieldGroup:     [{ qualifier: 'PODetails', position: 85 }]
+  @Consumption.valueHelpDefinition: [{ entity: { name: 'I_CnsldtnMaterialGroupVH', element: 'MaterialGroup' } }]
   MaterialGroup,
 
   @UI.fieldGroup: [{ qualifier: 'PODetails', position: 90 }]
@@ -101,6 +111,7 @@ define view ZC_PRPODIFOT_C
   @UI.fieldGroup: [{ qualifier: 'PODetails', position: 100 }]
   OrderQuantity,
 
+  @Consumption.valueHelpDefinition: [{ entity: { name: 'I_UnitOfMeasureStdVH', element: 'UnitOfMeasure' } }]
   PurchaseOrderQuantityUnit,
 
   @UI.fieldGroup: [{ qualifier: 'PODetails', position: 110 }]
@@ -147,6 +158,7 @@ define view ZC_PRPODIFOT_C
   SupplierConfirmedDelivDate,
 
   @UI.fieldGroup: [{ qualifier: 'SchedLines', position: 100 }]
+  @Consumption.valueHelpDefinition: [{ entity: { name: 'I_SupplierConfirmationCategory', element: 'SupplierConfirmationCategory' } }]
   SupplierConfirmationCategory,
 
   /* ── DIFOT Calculated Fields ───────────────────────────────── */

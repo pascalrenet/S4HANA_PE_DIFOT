@@ -55,6 +55,9 @@ define view ZC_PRPODIFOT
   @EndUserText.label: 'Purchasing Organization'
   po.PurchasingOrganization,
 
+  @EndUserText.label: 'Purchase Order Type'
+  po.PurchaseOrderType,
+
   @EndUserText.label: 'Purchasing Group'
   po.PurchasingGroup,
 

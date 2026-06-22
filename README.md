@@ -66,10 +66,9 @@ project root/
 1. In ADT, open the **ABAP Repository** perspective.
 2. Right-click your system node → **New → ABAP Package**.
 3. Set:
-   - **Name**: `ZLOCAL_DIFOT_MM` (or your preferred name — use it consistently throughout this guide)
+   - **Name**: `ZPURCHASING` (or your preferred name — use it consistently throughout this guide)
    - **Description**: `Supplier DIFOT development`
    - **Superpackage**: `Your own predefined Superpackage`
-   - **Application Component**: `MM-PUR` (or your preferred component)
 4. Assign it to a transport request when prompted, if not a LOCAL development.
 5. Click **Finish**.
 
@@ -86,7 +85,7 @@ This view aggregates net goods receipt quantities per PO item.
    - **Description**: `PO Item GR Quantity Summary`
 4. Click **Next**, assign the transport request , if development is not LOCAL→ **Finish**.
 5. ADT opens the editor. **Replace the entire content** with the code from `cds/ZC_PRPOItemGRSummary.asddls`.
-6. Press **Ctrl+S** to save, then press **F3** or click **Activate** (the icon that looks like a match).
+6. Press **Ctrl+S** to save, then click **Activate** (the icon that looks like a match).
 7. Verify it activates without errors in the **Problems** view.
 
 > **Key points about this view:**
