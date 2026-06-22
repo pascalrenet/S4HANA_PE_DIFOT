@@ -1,5 +1,8 @@
 # PO DIFOT Fiori List Report — Step-by-Step Implementation Guide
 
+## Foreword
+Use at Your Own Risk. You acknowledge and agree that your use of this software is entirely at your own risk. We do not guarantee that the software will be error-free, secure, or uninterrupted. We shall not be responsible or liable for any data loss, system damage, or financial costs arising from the use of this software.
+
 ## Overview
 
 This guide walks you through building a Fiori List Report that scores every purchase order item for **DIFOT** (Delivered In Full, On Time) status directly in SAP S/4HANA Cloud Public Edition.
