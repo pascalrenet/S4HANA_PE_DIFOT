@@ -16,7 +16,7 @@ I_PurOrdScheduleLineAPI01    ─┼──► ZC_PRPOSchedLineSummary  ──┐
 I_PurchaseOrderHistoryAPI01  ─┼──► ZC_PRPOItemGRSummary     ──┼──► ZC_PRPODIFOT ──► ZC_PRPODIFOT_C ──► OData V4 ──► Fiori App
                               ┘   ZC_PRPOGRHistoryLines ───────┘     (core calc)   (UI annotations)
                                                                                           │
-I_POSupplierConfirmationAPI01 ──► ZC_PRPOSuppConfLines (**UPDATE** navigation target) ───┘
+I_POSupplierConfirmationAPI01 ──► ZC_PRPOSuppConfLines ───────────────────────────────────┘
 ```
 
 ### File Reference
@@ -30,7 +30,7 @@ I_POSupplierConfirmationAPI01 ──► ZC_PRPOSuppConfLines (**UPDATE** navigat
 | `ZC_PRPODIFOTStatusVH.asddls` | `cds/` | Fixed-value value help for the DIFOT Status filter field (three values: DIFOT, NOT DIFOT, PENDING) |
 | `ZC_PRPODIFOTFailReasonVH.asddls` | `cds/` | Fixed-value value help for the Failure Reason filter field (four values: blank, SHORT, LATE, SHORT AND LATE) |
 | `ZC_PRPODIFOT_C.asddls` | `cds/` | Consumption view with Fiori/OData UI annotations |
-| `ZC_PRPOSuppConfLines.asddls` | `cds/` | **UPDATE** Individual supplier confirmation lines — navigation target for the Object Page Supplier Confirmation Lines section |
+| `ZC_PRPOSuppConfLines.asddls` | `cds/` | Individual supplier confirmation lines — navigation target for the Object Page Supplier Confirmation Lines section |
 | `ZC_PRPODIFOT_SRV.asdefs` | `service/` | Service definition — exposes `ZC_PRPODIFOT_C` as an OData V4 service |
 
 ### Folder Structure
@@ -46,7 +46,7 @@ project root/
 │   ├── ZC_PRPODIFOTStatusVH.asddls
 │   ├── ZC_PRPODIFOTFailReasonVH.asddls
 │   ├── ZC_PRPODIFOT_C.asddls
-│   └── ZC_PRPOSuppConfLines.asddls        ← **UPDATE**
+│   └── ZC_PRPOSuppConfLines.asddls        
 └──  service/                 ← service definition (.asdefs) file
     └── ZC_PRPODIFOT_SRV.asdefs
 
@@ -59,7 +59,7 @@ project root/
 - ADT (ABAP Developer Tools) installed in Eclipse and connected to your S/4HANA Cloud Public Edition system
 - A custom package in your system (e.g. `ZPURCHASING` or similar — if you do not have one, create it in Step 1 below)
 - Your user has the developer role (e.g. `SAP_BR_DEVELOPER`)
-- The standard CDS views `I_PurchaseOrderItemAPI01`, `I_PurchaseOrderAPI01`, `I_PurOrdScheduleLineAPI01`, `I_PurchaseOrderHistoryAPI01`, and `I_POSupplierConfirmationAPI01` exist in your system (they are delivered with S/4HANA Cloud Public Edition). **UPDATE**: `I_POSupplierConfirmationAPI01` is no longer joined into the core DIFOT view — it is sourced separately by `ZC_PRPOSuppConfLines` to show individual confirmation lines on the Object Page.
+- The standard CDS views `I_PurchaseOrderItemAPI01`, `I_PurchaseOrderAPI01`, `I_PurOrdScheduleLineAPI01`, `I_PurchaseOrderHistoryAPI01`, and `I_POSupplierConfirmationAPI01` exist in your system (they are delivered with S/4HANA Cloud Public Edition).
 
 ---
 
@@ -115,35 +115,7 @@ This view aggregates schedule line data per PO item.
 
 ---
 
-## Step 4 — Create CDS View `ZC_PRPODIFOT`
-
-This is the core DIFOT calculation view. It joins the two aggregation views with PO item and PO header data.
-
-**UPDATE**: This view no longer joins `I_POSupplierConfirmationAPI01`. Supplier confirmation data is instead surfaced on the Object Page via a separate navigation view (`ZC_PRPOSuppConfLines`, created in Step 5b). This ensures the core view always produces exactly one row per purchase order item, regardless of how many confirmation lines exist.
-
-1. Create a new **Data Definition** named `ZC_PRPODIFOT`.
-   - **Description**: `PO DIFOT - Delivered In Full and On Time`
-2. Replace the content with the code from `cds/ZC_PRPODIFOT.asddls`.
-3. Save and **Activate**.
-
-> **DIFOT Logic Summary:**
->
-> | Field | Logic |
-> |---|---|
-> | `QuantityVariance` | `TotalGRQuantity − OrderQuantity` (negative = short) |
-> | `DateVarianceInDays` | `LatestGRPostingDate − LatestSchedDelivDate` in days (positive = late) |
-> | `IsDeliveredInFull` | `'X'` if `TotalGRQuantity >= OrderQuantity` |
-> | `IsDeliveredOnTime` | `'X'` if `LatestGRPostingDate <= LatestSchedDelivDate` |
-> | `DIFOTStatus` | `'DIFOT'` / `'NOT DIFOT'` / `'PENDING'` (no GR yet) |
-> | `DIFOTFailureReason` | `'SHORT'` / `'LATE'` / `'SHORT AND LATE'` / `''` |
-
----
-
-## Step 5 — Create Navigation-Target CDS Views
-
-These views are used as navigation targets from `ZC_PRPODIFOT_C` so the Fiori Object Page can show detail tables when a user drills into a PO item.
-
-### Step 5a — Create CDS View `ZC_PRPOGRHistoryLines`
+### Step 4 — Create CDS View `ZC_PRPOGRHistoryLines`
 
 This view reads individual (non-aggregated) goods receipt and reversal lines from `I_PurchaseOrderHistoryAPI01`.
 
@@ -156,14 +128,14 @@ This view reads individual (non-aggregated) goods receipt and reversal lines fro
 5. **Replace the entire content** with the code from `cds/ZC_PRPOGRHistoryLines.asddls`.
 6. Press **Ctrl+S** to save, then **Activate**.
 
-### Step 5b — **UPDATE** Create CDS View `ZC_PRPOSuppConfLines`
+### Step 5 — Create CDS View `ZC_PRPOSuppConfLines`
 
 This view reads individual supplier confirmation lines from `I_POSupplierConfirmationAPI01`. It shows all active (non-deleted) confirmation records for a PO item on the Object Page, in a dedicated **Supplier Confirmation Lines** section below the Goods Receipt Lines section. All confirmation categories are shown (no category filter is applied in this view).
 
 1. In ADT, right-click your package `ZPURCHASING` → **New → Other ABAP Repository Object**.
 2. Under **Core Data Services**, select **Data Definition** → **Next**.
 3. Set:
-   - **Name**: `ZC_PRPOSCLINES`
+   - **Name**: `ZC_PRPOSUPPCONFLINES`
    - **Description**: `PO Item Supplier Confirmation Lines`
 4. Click **Next**, assign the transport request → **Finish**.
 5. **Replace the entire content** with the code from `cds/ZC_PRPOSuppConfLines.asddls`.
@@ -204,11 +176,34 @@ These two small views provide fixed-value lists for the **DIFOT Status** and **F
 
 ---
 
-## Step 7 — Create CDS Consumption View `ZC_PRPODIFOT_C`
+## Step 7 — Create CDS View `ZC_PRPODIFOT`
 
-This view adds Fiori UI annotations and declares navigation associations to `ZC_PRPOGRHistoryLines` and **UPDATE** `ZC_PRPOSuppConfLines` for the Object Page drill-down sections. OData service exposure is handled in Step 8 via an explicit service definition and binding.
+This is the core DIFOT calculation view. It joins the two aggregation views with PO item and PO header data.
 
-**UPDATE**: This view now declares two navigation associations and two corresponding Object Page line-item facets:
+
+1. Create a new **Data Definition** named `ZC_PRPODIFOT`.
+   - **Description**: `PO DIFOT - Delivered In Full and On Time`
+2. Replace the content with the code from `cds/ZC_PRPODIFOT.asddls`.
+3. Save and **Activate**.
+
+> **DIFOT Logic Summary:**
+>
+> | Field | Logic |
+> |---|---|
+> | `QuantityVariance` | `TotalGRQuantity − OrderQuantity` (negative = short) |
+> | `DateVarianceInDays` | `LatestGRPostingDate − LatestSchedDelivDate` in days (positive = late) |
+> | `IsDeliveredInFull` | `'X'` if `TotalGRQuantity >= OrderQuantity` |
+> | `IsDeliveredOnTime` | `'X'` if `LatestGRPostingDate <= LatestSchedDelivDate` |
+> | `DIFOTStatus` | `'DIFOT'` / `'NOT DIFOT'` / `'PENDING'` (no GR yet) |
+> | `DIFOTFailureReason` | `'SHORT'` / `'LATE'` / `'SHORT AND LATE'` / `''` |
+
+---
+
+## Step 8 — Create CDS Consumption View `ZC_PRPODIFOT_C`
+
+This view adds Fiori UI annotations and declares navigation associations to `ZC_PRPOGRHistoryLines` and `ZC_PRPOSuppConfLines` for the Object Page drill-down sections. OData service exposure is handled in Step 8 via an explicit service definition and binding.
+
+This view now declares two navigation associations and two corresponding Object Page line-item facets:
 - **Goods Receipt Lines** (position 40) — navigates to `ZC_PRPOGRHistoryLines`
 - **Supplier Confirmation Lines** (position 50) — navigates to `ZC_PRPOSuppConfLines`
 
@@ -222,11 +217,11 @@ The three supplier confirmation fields that were previously shown in the **Sched
 
 ---
 
-## Step 8 — Create Service Definition and Service Binding (OData V4)
+## Step 9 — Create Service Definition and Service Binding (OData V4)
 
 S/4HANA Cloud Public Edition requires an explicit service definition and binding to expose a CDS view as an OData service.
 
-### 8a — Create the Service Definition
+### 9a — Create the Service Definition
 
 1. In ADT, right-click your package → **New → Other ABAP Repository Object**.
 2. Under **Business Services**, select **Service Definition** → **Next**.
@@ -235,10 +230,10 @@ S/4HANA Cloud Public Edition requires an explicit service definition and binding
    - **Description**: `PO DIFOT OData Service Definition`
 4. Click **Next**, assign the transport request → **Finish**.
 5. Replace the content with the code from `service/ZC_PRPODIFOT_SRV.asdefs`.
-   **UPDATE**: The service definition now exposes three entity sets: `PODIFOTItem` (main list), `POGRHistoryLine` (GR detail navigation), and `POSuppConfLine` (supplier confirmation detail navigation).
+   The service definition now exposes three entity sets: `PODIFOTItem` (main list), `POGRHistoryLine` (GR detail navigation), and `POSuppConfLine` (supplier confirmation detail navigation).
 6. Save and **Activate**.
 
-### 8b — Create the Service Binding (OData V4)
+### 9b — Create the Service Binding (OData V4)
 
 1. Right-click the package again → **New → Other ABAP Repository Object** → **Service Binding** → **Next**.
 2. Set:
@@ -252,11 +247,11 @@ S/4HANA Cloud Public Edition requires an explicit service definition and binding
 
 
 ---
-## Step 9 — Create the Fiori App
+## Step 10 — Create the Fiori App
 
 To create the Fiori app per se, you can either use ADT itself, or you can use SAP BAS (Business Application Studio)
 
-### Step 9a — If you are using ADT
+### Step 10a — If you are using ADT
 I suggest the following resources:
 - [Quickly Generate and Deploy SAP Fiori Apps from ABAP Development Tools for Eclipse](https://community.sap.com/t5/application-development-and-automation-blog-posts/quickly-generate-and-deploy-sap-fiori-apps-from-abap-development-tools-for/ba-p/14116822)
 - [Creating SAP Fiori App Using Quick Fiori Application Generator](https://help.sap.com/docs/abap-cloud/abap-development-tools-user-guide/creating-sap-fiori-app-using-quick-fiori-application-generator?locale=en-US)
@@ -281,17 +276,17 @@ I suggest the following resources:
 ![Generator](imagery/fioriAppUrl.png)
 
 
-### Step 9b — If you are using BAS (SAP Business Application Studio)
+### Step 10b — If you are using BAS (SAP Business Application Studio)
 I suggest you follow the Developer learning journey and follow the tutorial [Develop a Custom UI for an SAP S/4HANA Cloud System](https://developers.sap.com/tutorials/abap-custom-ui-bas-develop-s4hc.html). You also have this Developer tutorial that will show you how to create a Destination in BTP to connect to your SAP S/4HANA Cloud system [Connect SAP Business Application Studio and SAP S/4HANA Cloud System](https://developers.sap.com/tutorials/abap-custom-ui-bas-connect-s4hc.html).
 
 This path I will not elaborate on, as the above tutorials are quite explicit.
 
 
-## Step 10 — Create the IAM App and Business Catalog in ADT
+## Step 11 — Create the IAM App and Business Catalog in ADT
 
 You must create an IAM App (which links the Fiori UI to the OData service) and a Business Catalog (which groups apps for role assignment) in ADT.
 
-### Step 10a — Create the IAM App
+### Step 11a — Create the IAM App
 
 1. In ADT, right-click your package `ZPURCHASING` → **New → Other ABAP Repository Object**.
 2. Under **Identity and Access Management**, select **IAM App** → **Next**.
@@ -310,7 +305,7 @@ You must create an IAM App (which links the Fiori UI to the OData service) and a
 7. **Save** and .
 8. Click **Publish Locally**.
 
-### Step 10b — Create the Business Catalog
+### Step 11b — Create the Business Catalog
 
 1. Right-click your package `ZPURCHASING` → **New → Other ABAP Repository Object**.
 2. Under **Cloud Identity and Access Management**, select **Business Catalog** → **Next**.
@@ -324,7 +319,7 @@ You must create an IAM App (which links the Fiori UI to the OData service) and a
 --> You could also here in the 'Restirction Types' tab add authorisation restrictions
 
 
-### Step 10 — Assign the Catalog to a Business Role (in the Launchpad)
+### Step 12 — Assign the Catalog to a Business Role (in the Launchpad)
 
 1. Open your Fiori Launchpad and launch the **Maintain Business Roles** app.
 2. Create a new role (e.g. name `ZBR_PR_PODIFOT_USER`, description `PO DIFOT Reporting`) or open an existing procurement role you want to add the app to.
@@ -334,7 +329,7 @@ You must create an IAM App (which links the Fiori UI to the OData service) and a
 
 ---
 
-### Step 11 — Assign the Role to your User (in the Launchpad)
+### Step 13 — Assign the Role to your User (in the Launchpad)
 
 1. Launch the **Maintain Business Users** app.
 2. Find your user → **Assigned Business Roles** → **Add** → select the role from Stage 3.
@@ -343,7 +338,7 @@ You must create an IAM App (which links the Fiori UI to the OData service) and a
 
 ---
 
-### Step 12 — Pin the Tile to your Home Page
+### Step 14 — Pin the Tile to your Home Page
 
 I would suggest you create a dedidcated Fiori Launchpad Space and Page
 
@@ -375,4 +370,4 @@ Clciking a specific line, will then drill down to an object page with data speci
 
 ![Object Page](imagery/objectPage.png)
 
-**UPDATE**: The Object Page now includes a second detail table section — **Supplier Confirmation Lines** — displayed below the Goods Receipt Lines section. This table shows all active supplier confirmation records for the selected PO item, including confirmation category, sequential number, delivery date, confirmed quantity, and creation date. Deleted confirmations are filtered out automatically.
+The Object Page now includes a second detail table section — **Supplier Confirmation Lines** — displayed below the Goods Receipt Lines section. This table shows all active supplier confirmation records for the selected PO item, including confirmation category, sequential number, delivery date, confirmed quantity, and creation date. Deleted confirmations are filtered out automatically.
