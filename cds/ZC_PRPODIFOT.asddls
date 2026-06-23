@@ -12,7 +12,6 @@
     - I_PurchaseOrderAPI01          (PO header: supplier, plant, doc date)
     - ZC_PRPOSchedLineSummary       (scheduled delivery date + scheduled qty)
     - ZC_PRPOItemGRSummary          (actual goods receipt qty + posting date)
-    - I_POSupplierConfirmationAPI01 (LEFT OUTER - supplier confirmed qty/date)
 
   DIFOT Rules (strict):
     DeliveredInFull  = TotalGRQuantity >= OrderQuantity
@@ -33,12 +32,6 @@ define view ZC_PRPODIFOT
   left outer join ZC_PRPOItemGRSummary       as gr
     on  gr.PurchaseOrder     = item.PurchaseOrder
     and gr.PurchaseOrderItem = item.PurchaseOrderItem
-
-  /* Take the most-recent active (non-deleted) supplier confirmation per item */
-  left outer join I_POSupplierConfirmationAPI01 as conf
-    on  conf.PurchaseOrder     = item.PurchaseOrder
-    and conf.PurchaseOrderItem = item.PurchaseOrderItem
-    and conf.IsDeleted         = ''
 
 {
   /* ── Keys ─────────────────────────────────────────────────── */
@@ -125,17 +118,6 @@ define view ZC_PRPODIFOT
 
   @EndUserText.label: 'Latest GR Date'
   gr.LatestGRPostingDate,
-
-  /* ── Supplier Confirmation (optional) ─────────────────────── */
-  @EndUserText.label: 'Supplier Confirmed Quantity'
-  @Semantics.quantity.unitOfMeasure: 'PurchaseOrderQuantityUnit'
-  conf.ConfirmedQuantity,
-
-  @EndUserText.label: 'Supplier Confirmed Delivery Date'
-  conf.DeliveryDate                               as SupplierConfirmedDelivDate,
-
-  @EndUserText.label: 'Supplier Confirmation Category'
-  conf.SupplierConfirmationCategory,
 
   /* ── DIFOT Calculated Fields ──────────────────────────────── */
 

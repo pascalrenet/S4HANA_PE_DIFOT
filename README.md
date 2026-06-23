@@ -10,11 +10,13 @@ This guide walks you through building a Fiori List Report that scores every purc
 ### Architecture at a Glance
 
 ```
-I_PurchaseOrderItemAPI01  ──┐
-I_PurchaseOrderAPI01       ─┤
-I_PurOrdScheduleLineAPI01  ─┼──► ZC_PRPOSchedLineSummary  ──┐
-I_PurchaseOrderHistoryAPI01─┼──► ZC_PRPOItemGRSummary     ──┼──► ZC_PRPODIFOT ──► ZC_PRPODIFOT_C ──► OData V4 ──► Fiori App
-I_POSupplierConfirmationAPI01┘   ZC_PRPOGRHistoryLines ──────┘     (core calc)   (UI annotations)
+I_PurchaseOrderItemAPI01    ──┐
+I_PurchaseOrderAPI01         ─┤
+I_PurOrdScheduleLineAPI01    ─┼──► ZC_PRPOSchedLineSummary  ──┐
+I_PurchaseOrderHistoryAPI01  ─┼──► ZC_PRPOItemGRSummary     ──┼──► ZC_PRPODIFOT ──► ZC_PRPODIFOT_C ──► OData V4 ──► Fiori App
+                              ┘   ZC_PRPOGRHistoryLines ───────┘     (core calc)   (UI annotations)
+                                                                                          │
+I_POSupplierConfirmationAPI01 ──► ZC_PRPOSuppConfLines (**UPDATE** navigation target) ───┘
 ```
 
 ### File Reference
@@ -28,6 +30,7 @@ I_POSupplierConfirmationAPI01┘   ZC_PRPOGRHistoryLines ──────┘  
 | `ZC_PRPODIFOTStatusVH.asddls` | `cds/` | Fixed-value value help for the DIFOT Status filter field (three values: DIFOT, NOT DIFOT, PENDING) |
 | `ZC_PRPODIFOTFailReasonVH.asddls` | `cds/` | Fixed-value value help for the Failure Reason filter field (four values: blank, SHORT, LATE, SHORT AND LATE) |
 | `ZC_PRPODIFOT_C.asddls` | `cds/` | Consumption view with Fiori/OData UI annotations |
+| `ZC_PRPOSuppConfLines.asddls` | `cds/` | **UPDATE** Individual supplier confirmation lines — navigation target for the Object Page Supplier Confirmation Lines section |
 | `ZC_PRPODIFOT_SRV.asdefs` | `service/` | Service definition — exposes `ZC_PRPODIFOT_C` as an OData V4 service |
 
 ### Folder Structure
@@ -42,7 +45,8 @@ project root/
 │   ├── ZC_PRPOGRHistoryLines.asddls
 │   ├── ZC_PRPODIFOTStatusVH.asddls
 │   ├── ZC_PRPODIFOTFailReasonVH.asddls
-│   └── ZC_PRPODIFOT_C.asddls
+│   ├── ZC_PRPODIFOT_C.asddls
+│   └── ZC_PRPOSuppConfLines.asddls        ← **UPDATE**
 └──  service/                 ← service definition (.asdefs) file
     └── ZC_PRPODIFOT_SRV.asdefs
 
@@ -55,7 +59,7 @@ project root/
 - ADT (ABAP Developer Tools) installed in Eclipse and connected to your S/4HANA Cloud Public Edition system
 - A custom package in your system (e.g. `ZPURCHASING` or similar — if you do not have one, create it in Step 1 below)
 - Your user has the developer role (e.g. `SAP_BR_DEVELOPER`)
-- The standard CDS views `I_PurchaseOrderItemAPI01`, `I_PurchaseOrderAPI01`, `I_PurOrdScheduleLineAPI01`, `I_PurchaseOrderHistoryAPI01`, and `I_POSupplierConfirmationAPI01` exist in your system (they are delivered with S/4HANA Cloud Public Edition)
+- The standard CDS views `I_PurchaseOrderItemAPI01`, `I_PurchaseOrderAPI01`, `I_PurOrdScheduleLineAPI01`, `I_PurchaseOrderHistoryAPI01`, and `I_POSupplierConfirmationAPI01` exist in your system (they are delivered with S/4HANA Cloud Public Edition). **UPDATE**: `I_POSupplierConfirmationAPI01` is no longer joined into the core DIFOT view — it is sourced separately by `ZC_PRPOSuppConfLines` to show individual confirmation lines on the Object Page.
 
 ---
 
@@ -115,6 +119,8 @@ This view aggregates schedule line data per PO item.
 
 This is the core DIFOT calculation view. It joins the two aggregation views with PO item and PO header data.
 
+**UPDATE**: This view no longer joins `I_POSupplierConfirmationAPI01`. Supplier confirmation data is instead surfaced on the Object Page via a separate navigation view (`ZC_PRPOSuppConfLines`, created in Step 5b). This ensures the core view always produces exactly one row per purchase order item, regardless of how many confirmation lines exist.
+
 1. Create a new **Data Definition** named `ZC_PRPODIFOT`.
    - **Description**: `PO DIFOT - Delivered In Full and On Time`
 2. Replace the content with the code from `cds/ZC_PRPODIFOT.asddls`.
@@ -133,9 +139,13 @@ This is the core DIFOT calculation view. It joins the two aggregation views with
 
 ---
 
-## Step 5 — Create CDS View `ZC_PRPOGRHistoryLines`
+## Step 5 — Create Navigation-Target CDS Views
 
-This view reads individual (non-aggregated) goods receipt and reversal lines from `I_PurchaseOrderHistoryAPI01`. It is used as a navigation target from `ZC_PRPODIFOT_C` so the Fiori Object Page can show a table of individual GR movements when a user drills into a PO item.
+These views are used as navigation targets from `ZC_PRPODIFOT_C` so the Fiori Object Page can show detail tables when a user drills into a PO item.
+
+### Step 5a — Create CDS View `ZC_PRPOGRHistoryLines`
+
+This view reads individual (non-aggregated) goods receipt and reversal lines from `I_PurchaseOrderHistoryAPI01`.
 
 1. In ADT, right-click your package `ZPURCHASING` → **New → Other ABAP Repository Object**.
 2. Under **Core Data Services**, select **Data Definition** → **Next**.
@@ -144,7 +154,25 @@ This view reads individual (non-aggregated) goods receipt and reversal lines fro
    - **Description**: `PO Item GR History Lines`
 4. Click **Next**, assign the transport request → **Finish**.
 5. **Replace the entire content** with the code from `cds/ZC_PRPOGRHistoryLines.asddls`.
-6. Press **Ctrl+S** to save, then **Activate**. 
+6. Press **Ctrl+S** to save, then **Activate**.
+
+### Step 5b — **UPDATE** Create CDS View `ZC_PRPOSuppConfLines`
+
+This view reads individual supplier confirmation lines from `I_POSupplierConfirmationAPI01`. It shows all active (non-deleted) confirmation records for a PO item on the Object Page, in a dedicated **Supplier Confirmation Lines** section below the Goods Receipt Lines section. All confirmation categories are shown (no category filter is applied in this view).
+
+1. In ADT, right-click your package `ZPURCHASING` → **New → Other ABAP Repository Object**.
+2. Under **Core Data Services**, select **Data Definition** → **Next**.
+3. Set:
+   - **Name**: `ZC_PRPOSCLINES`
+   - **Description**: `PO Item Supplier Confirmation Lines`
+4. Click **Next**, assign the transport request → **Finish**.
+5. **Replace the entire content** with the code from `cds/ZC_PRPOSuppConfLines.asddls`.
+6. Press **Ctrl+S** to save, then **Activate**.
+
+> **Key points about this view:**
+> - Filters `IsDeleted = ''` — deleted confirmations are hidden
+> - One row per confirmation line (no aggregation) — keyed by `PurchaseOrder`, `PurchaseOrderItem`, and `SequentialNmbrOfSuplrconf`
+> - Shows: Category, Seq. No., Delivery Date, Confirmed Qty, Unit, Created On
 
 
 ---
@@ -178,7 +206,13 @@ These two small views provide fixed-value lists for the **DIFOT Status** and **F
 
 ## Step 7 — Create CDS Consumption View `ZC_PRPODIFOT_C`
 
-This view adds Fiori UI annotations and declares a navigation association to `ZC_PRPOGRHistoryLines` for the Object Page drill-down. OData service exposure is handled in Step 8 via an explicit service definition and binding.
+This view adds Fiori UI annotations and declares navigation associations to `ZC_PRPOGRHistoryLines` and **UPDATE** `ZC_PRPOSuppConfLines` for the Object Page drill-down sections. OData service exposure is handled in Step 8 via an explicit service definition and binding.
+
+**UPDATE**: This view now declares two navigation associations and two corresponding Object Page line-item facets:
+- **Goods Receipt Lines** (position 40) — navigates to `ZC_PRPOGRHistoryLines`
+- **Supplier Confirmation Lines** (position 50) — navigates to `ZC_PRPOSuppConfLines`
+
+The three supplier confirmation fields that were previously shown in the **Schedule & GR** field group (`ConfirmedQuantity`, `SupplierConfirmedDelivDate`, `SupplierConfirmationCategory`) have been removed. Confirmation data is now exclusively visible in the **Supplier Confirmation Lines** table section on the Object Page.
 
 1. Create a new **Data Definition** named `ZC_PRPODIFOT_C`.
    - **Description**: `PO DIFOT List Report`
@@ -201,6 +235,7 @@ S/4HANA Cloud Public Edition requires an explicit service definition and binding
    - **Description**: `PO DIFOT OData Service Definition`
 4. Click **Next**, assign the transport request → **Finish**.
 5. Replace the content with the code from `service/ZC_PRPODIFOT_SRV.asdefs`.
+   **UPDATE**: The service definition now exposes three entity sets: `PODIFOTItem` (main list), `POGRHistoryLine` (GR detail navigation), and `POSuppConfLine` (supplier confirmation detail navigation).
 6. Save and **Activate**.
 
 ### 8b — Create the Service Binding (OData V4)
@@ -339,3 +374,5 @@ have also been added to help you filter on the custom DIFOT fields introduced in
 Clciking a specific line, will then drill down to an object page with data specific to the selected purchase order  item line, including the purchase order history, limited to goods movements. This may help you to understand goods receipts and cancellations.
 
 ![Object Page](imagery/objectPage.png)
+
+**UPDATE**: The Object Page now includes a second detail table section — **Supplier Confirmation Lines** — displayed below the Goods Receipt Lines section. This table shows all active supplier confirmation records for the selected PO item, including confirmation category, sequential number, delivery date, confirmed quantity, and creation date. Deleted confirmations are filtered out automatically.

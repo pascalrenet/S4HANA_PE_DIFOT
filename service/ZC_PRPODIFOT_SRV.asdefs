@@ -11,4 +11,5 @@
 define service ZC_PRPODIFOT_SRV {
   expose ZC_PRPODIFOT_C        as PODIFOTItem;
   expose ZC_PRPOGRHistoryLines as POGRHistoryLine;
+  expose ZC_PRPOSuppConfLines  as POSuppConfLine;
 }

@@ -27,6 +27,11 @@ define view ZC_PRPODIFOT_C
     on  _GRLines.PurchaseOrder     = $projection.PurchaseOrder
     and _GRLines.PurchaseOrderItem = $projection.PurchaseOrderItem
 
+  /* Navigation to supplier confirmation lines for the Object Page table */
+  association [0..*] to ZC_PRPOSuppConfLines  as _ConfLines
+    on  _ConfLines.PurchaseOrder     = $projection.PurchaseOrder
+    and _ConfLines.PurchaseOrderItem = $projection.PurchaseOrderItem
+
 {
   /* ── Keys ──────────────────────────────────────────────────── */
   @UI.facet: [{ id: 'PODetails',    type: #FIELDGROUP_REFERENCE, label: 'PO Details',          position: 10,
@@ -35,8 +40,10 @@ define view ZC_PRPODIFOT_C
                 targetQualifier: 'DIFOTDetails' },
               { id: 'SchedLines',   type: #FIELDGROUP_REFERENCE, label: 'Schedule & GR',       position: 30,
                 targetQualifier: 'SchedLines' },
-              { id: 'GRLines',      type: #LINEITEM_REFERENCE,   label: 'Goods Receipt Lines', position: 40,
-                targetElement: '_GRLines' }]
+              { id: 'GRLines',      type: #LINEITEM_REFERENCE,   label: 'Goods Receipt Lines',         position: 40,
+                targetElement: '_GRLines' },
+              { id: 'ConfLines',    type: #LINEITEM_REFERENCE,   label: 'Supplier Confirmation Lines', position: 50,
+                targetElement: '_ConfLines' }]
 
   @UI.selectionField: [{ position: 10 }]
   @UI.lineItem:       [{ position: 10, importance: #HIGH,   label: 'Purchase Order' }]
@@ -150,17 +157,6 @@ define view ZC_PRPODIFOT_C
   @UI.fieldGroup: [{ qualifier: 'SchedLines', position: 70 }]
   LatestGRPostingDate,
 
-  /* ── Supplier Confirmation Fields ──────────────────────────── */
-  @UI.fieldGroup: [{ qualifier: 'SchedLines', position: 80 }]
-  ConfirmedQuantity,
-
-  @UI.fieldGroup: [{ qualifier: 'SchedLines', position: 90 }]
-  SupplierConfirmedDelivDate,
-
-  @UI.fieldGroup: [{ qualifier: 'SchedLines', position: 100 }]
-  @Consumption.valueHelpDefinition: [{ entity: { name: 'I_SupplierConfirmationCategory', element: 'SupplierConfirmationCategory' } }]
-  SupplierConfirmationCategory,
-
   /* ── DIFOT Calculated Fields ───────────────────────────────── */
   @UI.lineItem:   [{ position: 90,  importance: #HIGH,   label: 'Qty Variance'     }]
   @UI.fieldGroup: [{ qualifier: 'DIFOTDetails', position: 10 }]
@@ -207,6 +203,7 @@ define view ZC_PRPODIFOT_C
     end
   as abap.int1 )                as DIFOTCriticality,
 
-  /* Navigation association – exposed so OData can navigate to GR lines */
-  _GRLines
+  /* Navigation associations – exposed so OData can navigate to detail lines */
+  _GRLines,
+  _ConfLines
 }
