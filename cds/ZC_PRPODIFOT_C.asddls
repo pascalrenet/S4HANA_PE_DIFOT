@@ -12,8 +12,8 @@
 @UI.headerInfo: {
   typeName:       'PO DIFOT Item',
   typeNamePlural: 'PO DIFOT Items',
-  title:          { value: 'PurchaseOrder' },
-  description:    { value: 'PurchaseOrderItemText' }
+  title:          { value: 'PurchaseOrderItem' },
+  description:    { value: 'PurchaseOrder' }
 }
 
 /* ── Selection Fields (smart filter bar) ─────────────────────── */
@@ -53,7 +53,6 @@ define view ZC_PRPODIFOT_C
   @Search.defaultSearchElement: true
   key PurchaseOrder,
 
-  @UI.selectionField: [{ position: 20 }]
   @UI.lineItem:       [{ position: 20, importance: #HIGH,   label: 'PO Item'        }]
   @UI.identification: [{ position: 20 }]
   @UI.fieldGroup:     [{ qualifier: 'PODetails', position: 6 }]
@@ -75,12 +74,10 @@ define view ZC_PRPODIFOT_C
   @Consumption.valueHelpDefinition: [{ entity: { name: 'I_PurchasingOrganization', element: 'PurchasingOrganization' } }]
   PurchasingOrganization,
 
-  @UI.selectionField: [{ position: 45 }]
   @UI.fieldGroup:     [{ qualifier: 'PODetails', position: 35 }]
   @Consumption.valueHelpDefinition: [{ entity: { name: 'I_PurchaseOrderType', element: 'PurchaseOrderType' } }]
   PurchaseOrderType,
 
-  @UI.selectionField: [{ position: 50 }]
   @UI.fieldGroup:     [{ qualifier: 'PODetails', position: 40 }]
   @Consumption.valueHelpDefinition: [{ entity: { name: 'I_PurchasingGroup', element: 'PurchasingGroup' } }]
   PurchasingGroup,
@@ -99,13 +96,11 @@ define view ZC_PRPODIFOT_C
   @Consumption.valueHelpDefinition: [{ entity: { name: 'I_ProductStdVH', element: 'Product' } }]
   Material,
 
-  @UI.selectionField: [{ position: 70 }]
   @UI.lineItem:       [{ position: 50, importance: #MEDIUM, label: 'Plant'          }]
   @UI.fieldGroup:     [{ qualifier: 'PODetails', position: 80 }]
   @Consumption.valueHelpDefinition: [{ entity: { name: 'I_PlantStdVH', element: 'Plant' } }]
   Plant,
 
-  @UI.selectionField: [{ position: 75 }]
   @UI.lineItem:       [{ position: 60, importance: #MEDIUM, label: 'Material Group' }]
   @UI.fieldGroup:     [{ qualifier: 'PODetails', position: 85 }]
   @Consumption.valueHelpDefinition: [{ entity: { name: 'I_CnsldtnMaterialGroupVH', element: 'MaterialGroup' } }]
@@ -118,6 +113,7 @@ define view ZC_PRPODIFOT_C
   @UI.fieldGroup: [{ qualifier: 'PODetails', position: 100 }]
   OrderQuantity,
 
+  @UI.lineItem:   [{ position: 71, importance: #LOW, label: 'Unit' }]
   @Consumption.valueHelpDefinition: [{ entity: { name: 'I_UnitOfMeasureStdVH', element: 'UnitOfMeasure' } }]
   PurchaseOrderQuantityUnit,
 
@@ -134,12 +130,12 @@ define view ZC_PRPODIFOT_C
   @UI.fieldGroup: [{ qualifier: 'SchedLines', position: 10 }]
   TotalScheduledQuantity,
 
-  @UI.fieldGroup:     [{ qualifier: 'SchedLines', position: 20 }]
-  @UI.selectionField: [{ position: 80 }]
+  @UI.fieldGroup: [{ qualifier: 'SchedLines', position: 20 }]
   EarliestSchedDelivDate,
 
-  @UI.fieldGroup: [{ qualifier: 'SchedLines', position: 30 }]
-  @UI.lineItem:   [{ position: 100, importance: #HIGH,   label: 'Sched Del. Date'  }]
+  @UI.fieldGroup:     [{ qualifier: 'SchedLines', position: 30 }]
+  @UI.lineItem:       [{ position: 100, importance: #HIGH, label: 'Sched Del. Date' }]
+  @UI.selectionField: [{ position: 80 }]
   LatestSchedDelivDate,
 
   @UI.fieldGroup: [{ qualifier: 'SchedLines', position: 40 }]
@@ -198,6 +194,7 @@ define view ZC_PRPODIFOT_C
     case DIFOTStatus
       when 'DIFOT'     then 3   -- green
       when 'NOT DIFOT' then 1   -- red
+      when 'OVERDUE'   then 1   -- red
       when 'PENDING'   then 2   -- orange
       else 0
     end

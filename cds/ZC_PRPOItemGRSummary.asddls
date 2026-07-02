@@ -30,7 +30,7 @@ define view ZC_PRPOItemGRSummary
       max( PurchaseOrderQuantityUnit )    as PurchaseOrderQuantityUnit,
 
       @EndUserText.label: 'Latest GR Posting Date'
-      max( PostingDate )                  as LatestGRPostingDate,
+      max( case DebitCreditCode when 'S' then PostingDate end ) as LatestGRPostingDate,
 
       @EndUserText.label: 'First GR Posting Date'
       min( case DebitCreditCode when 'S' then PostingDate end ) as FirstGRPostingDate

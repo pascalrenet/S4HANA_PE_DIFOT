@@ -33,6 +33,15 @@ union all
 
 select from I_Language
 {
+  key cast( 'OVERDUE' as abap.char(10) )             as DIFOTStatus,
+  cast( 'Overdue - No Goods Receipt' as abap.char(40) ) as DIFOTStatusText
+}
+where Language = 'E'
+
+union all
+
+select from I_Language
+{
   key cast( 'PENDING' as abap.char(10) )             as DIFOTStatus,
   cast( 'No Goods Receipt Yet' as abap.char(40) )    as DIFOTStatusText
 }

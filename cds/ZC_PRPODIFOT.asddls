@@ -114,10 +114,20 @@ define view ZC_PRPODIFOT
   gr.TotalGRQuantity,
 
   @EndUserText.label: 'First GR Date'
-  gr.FirstGRPostingDate,
+  cast(
+    case
+      when gr.TotalGRQuantity is null or gr.TotalGRQuantity <= 0 then '00000000'
+      else gr.FirstGRPostingDate
+    end
+  as abap.dats )                                   as FirstGRPostingDate,
 
   @EndUserText.label: 'Latest GR Date'
-  gr.LatestGRPostingDate,
+  cast(
+    case
+      when gr.TotalGRQuantity is null or gr.TotalGRQuantity <= 0 then '00000000'
+      else gr.LatestGRPostingDate
+    end
+  as abap.dats )                                   as LatestGRPostingDate,
 
   /* ── DIFOT Calculated Fields ──────────────────────────────── */
 
@@ -128,7 +138,10 @@ define view ZC_PRPODIFOT
   @EndUserText.label: 'Quantity Variance (GR - Ordered)'
   @Semantics.quantity.unitOfMeasure: 'PurchaseOrderQuantityUnit'
   cast(
-    gr.TotalGRQuantity - item.OrderQuantity
+    case
+      when gr.TotalGRQuantity is null or gr.TotalGRQuantity <= 0 then 0
+      else gr.TotalGRQuantity - item.OrderQuantity
+    end
   as abap.dec( 13, 3 ) )                          as QuantityVariance,
 
   /*
@@ -139,6 +152,7 @@ define view ZC_PRPODIFOT
   @EndUserText.label: 'Date Variance in Days (Actual - Scheduled)'
   cast(
     case
+      when gr.TotalGRQuantity is null or gr.TotalGRQuantity <= 0 then 0
       when gr.LatestGRPostingDate    is not null
        and sched.LatestSchedDelivDate is not null
       then dats_days_between( sched.LatestSchedDelivDate, gr.LatestGRPostingDate )
@@ -153,6 +167,7 @@ define view ZC_PRPODIFOT
   @EndUserText.label: 'Delivered In Full'
   cast(
     case
+      when gr.TotalGRQuantity is null or gr.TotalGRQuantity <= 0 then ''
       when gr.TotalGRQuantity >= item.OrderQuantity then 'X'
       else ''
     end
@@ -165,6 +180,7 @@ define view ZC_PRPODIFOT
   @EndUserText.label: 'Delivered On Time'
   cast(
     case
+      when gr.TotalGRQuantity is null or gr.TotalGRQuantity <= 0 then ''
       when gr.LatestGRPostingDate    is null          then ''
       when sched.LatestSchedDelivDate is null          then ''
       when gr.LatestGRPostingDate <= sched.LatestSchedDelivDate then 'X'
@@ -175,19 +191,29 @@ define view ZC_PRPODIFOT
   /*
     Overall DIFOT Status:
       'DIFOT'     – full AND on time
-      'NOT DIFOT' – any failure
-      'PENDING'   – no GR received yet
+      'NOT DIFOT' – GR received but short or late
+      'OVERDUE'   – no net GR and scheduled delivery date is in the past
+      'PENDING'   – no net GR and scheduled delivery date is today or in the future
   */
   @EndUserText.label: 'DIFOT Status'
   cast(
     case
-      when gr.TotalGRQuantity is null
-        then 'PENDING'
+      /* Full delivery received */
       when gr.TotalGRQuantity >= item.OrderQuantity
        and ( sched.LatestSchedDelivDate is null
              or gr.LatestGRPostingDate <= sched.LatestSchedDelivDate )
         then 'DIFOT'
-      else 'NOT DIFOT'
+      /* GR started (net qty > 0) but window closed or qty short */
+      when gr.TotalGRQuantity is not null
+       and gr.TotalGRQuantity > 0
+        then 'NOT DIFOT'
+      /* No net GR and delivery date already passed */
+      when ( gr.TotalGRQuantity is null or gr.TotalGRQuantity <= 0 )
+       and sched.LatestSchedDelivDate is not null
+       and sched.LatestSchedDelivDate < $session.system_date
+        then 'OVERDUE'
+      /* No net GR and delivery date is today or in the future */
+      else 'PENDING'
     end
   as abap.char( 10 ) )                            as DIFOTStatus,
 
@@ -201,7 +227,7 @@ define view ZC_PRPODIFOT
   @EndUserText.label: 'DIFOT Failure Reason'
   cast(
     case
-      when gr.TotalGRQuantity is null then ''   -- PENDING
+      when gr.TotalGRQuantity is null or gr.TotalGRQuantity <= 0 then ''   -- OVERDUE or PENDING
       when gr.TotalGRQuantity <  item.OrderQuantity
        and sched.LatestSchedDelivDate is not null
        and gr.LatestGRPostingDate >  sched.LatestSchedDelivDate
