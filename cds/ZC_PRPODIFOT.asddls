@@ -211,7 +211,7 @@ define view ZC_PRPODIFOT
       when ( gr.TotalGRQuantity is null or gr.TotalGRQuantity <= 0 )
        and sched.LatestSchedDelivDate is not null
        and sched.LatestSchedDelivDate < $session.system_date
-        then 'OVERDUE'
+        then 'NOT DIFOT'
       /* No net GR and delivery date is today or in the future */
       else 'PENDING'
     end

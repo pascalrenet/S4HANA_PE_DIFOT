@@ -12,7 +12,7 @@
 @UI.headerInfo: {
   typeName:       'PO DIFOT Item',
   typeNamePlural: 'PO DIFOT Items',
-  title:          { value: 'PurchaseOrderItem' },
+  title:          { value: 'PurchaseOrderItemText' },
   description:    { value: 'PurchaseOrder' }
 }
 
@@ -106,7 +106,7 @@ define view ZC_PRPODIFOT_C
   @Consumption.valueHelpDefinition: [{ entity: { name: 'I_CnsldtnMaterialGroupVH', element: 'MaterialGroup' } }]
   MaterialGroup,
 
-  @UI.fieldGroup: [{ qualifier: 'PODetails', position: 90 }]
+  @UI.fieldGroup:     [{ qualifier: 'PODetails', position: 90 }]
   PurchaseOrderItemText,
 
   @UI.lineItem:   [{ position: 70, importance: #HIGH,   label: 'Ordered Qty'    }]
@@ -194,7 +194,6 @@ define view ZC_PRPODIFOT_C
     case DIFOTStatus
       when 'DIFOT'     then 3   -- green
       when 'NOT DIFOT' then 1   -- red
-      when 'OVERDUE'   then 1   -- red
       when 'PENDING'   then 2   -- orange
       else 0
     end

@@ -27,7 +27,7 @@ I_POSupplierConfirmationAPI01 ──► ZC_PRPOSuppConfLines ──────�
 | `ZC_PRPOSchedLineSummary.asddls` | `cds/` | Aggregates scheduled quantity and delivery dates from schedule lines |
 | `ZC_PRPODIFOT.asddls` | `cds/` | Joins all sources; calculates DIFOT status, flags, variances |
 | `ZC_PRPOGRHistoryLines.asddls` | `cds/` | Individual GR lines — navigation target for the Object Page drill-down; must exist before `ZC_PRPODIFOT_C` |
-| `ZC_PRPODIFOTStatusVH.asddls` | `cds/` | Fixed-value value help for the DIFOT Status filter field (four values: DIFOT, NOT DIFOT, OVERDUE, PENDING) |
+| `ZC_PRPODIFOTStatusVH.asddls` | `cds/` | Fixed-value value help for the DIFOT Status filter field (three values: DIFOT, NOT DIFOT, PENDING) |
 | `ZC_PRPODIFOTFailReasonVH.asddls` | `cds/` | Fixed-value value help for the Failure Reason filter field (four values: blank, SHORT, LATE, SHORT AND LATE) |
 | `ZC_PRPODIFOT_C.asddls` | `cds/` | Consumption view with Fiori/OData UI annotations |
 | `ZC_PRPOSuppConfLines.asddls` | `cds/` | Individual supplier confirmation lines — navigation target for the Object Page Supplier Confirmation Lines section |
@@ -56,6 +56,20 @@ project root/
 
 ## Changes
 
+### 3 July 2026
+
+**Removed OVERDUE status**
+The `OVERDUE` status has been removed. A PO item that is past its scheduled delivery date with no goods receipt posted is now classified as `NOT DIFOT` — since the delivery window has closed, it is by definition a DIFOT failure. Changes were made to three files:
+- `ZC_PRPODIFOT.asddls` — `DIFOTStatus` calculation: the OVERDUE branch now returns `'NOT DIFOT'`
+- `ZC_PRPODIFOTStatusVH.asddls` — removed the `OVERDUE` value help entry (now three values: DIFOT, NOT DIFOT, PENDING)
+- `ZC_PRPODIFOT_C.asddls` — removed the `OVERDUE` criticality mapping entry
+
+**Object Page header — material short text as title**
+The Object Page header title has been changed from `PurchaseOrderItem` (the item number) to `PurchaseOrderItemText` (the material short text), making the header more human-readable at a glance. The PO number remains in the description slot. Change made to one file:
+- `ZC_PRPODIFOT_C.asddls` — `@UI.headerInfo.title.value` changed from `'PurchaseOrderItem'` to `'PurchaseOrderItemText'`
+
+---
+
 ### 2 July 2026
 
 **Filter bar reduction**
@@ -77,7 +91,7 @@ A PO item where a goods receipt (movement 101) has been fully cancelled by a rev
 
 - `ZC_PRPOItemGRSummary.asddls` — `LatestGRPostingDate` now only considers receipt movements (`DebitCreditCode = 'S'`), excluding reversal posting dates
 - `ZC_PRPODIFOT.asddls` — all "no GR" conditions now treat net GR quantity of zero the same as null:
-  - `DIFOTStatus` — correctly classifies net-zero items as OVERDUE or PENDING
+  - `DIFOTStatus` — correctly classifies net-zero items as NOT DIFOT or PENDING
   - `DIFOTFailureReason` — returns blank for net-zero items
   - `IsDeliveredInFull` — returns blank for net-zero items
   - `IsDeliveredOnTime` — returns blank for net-zero items
@@ -112,37 +126,35 @@ The logic evaluates the four statuses in the following order of precedence:
 
 ### NOT DIFOT — red
 
-> A net positive goods receipt exists but the delivery has failed — either short, late, or both.
+> A goods receipt has failed, or the delivery date has passed with no goods receipt posted.
 
-**Conditions:**
+**Conditions (either of the following):**
+
+*Partial or late delivery:*
 - Net `TotalGRQuantity > 0` (at least some quantity has been received and not fully reversed), **AND**
 - The received quantity is less than ordered, or the GR was posted after the scheduled delivery date
 
+*Overdue with no GR:*
+- Net `TotalGRQuantity` is null or zero (no GR posted, or all GRs have been fully reversed), **AND**
+- `LatestSchedDelivDate` is not null, **AND**
+- `LatestSchedDelivDate < TODAY` (the delivery window has closed)
+
 This status also captures partial deliveries where the scheduled delivery date has already passed and the supplier can no longer complete the delivery on time.
 
-The `DIFOTFailureReason` field provides further detail:
+The `DIFOTFailureReason` field provides further detail for cases where a GR exists:
 
 | Failure Reason | Meaning |
 |---|---|
 | `SHORT` | Quantity received is less than ordered, but delivery was on time |
 | `LATE` | Full quantity received, but after the scheduled delivery date |
 | `SHORT AND LATE` | Both short and late |
-| *(blank)* | No failure — status is DIFOT, PENDING, or OVERDUE |
+| *(blank)* | No failure (DIFOT or PENDING), or no GR exists yet |
 
 ---
 
-### OVERDUE — red
+### ~~OVERDUE~~
 
-> The scheduled delivery date has passed and no net goods receipt exists.
-
-**Conditions:**
-- Net `TotalGRQuantity` is null or zero (no GR posted, or all GRs have been fully reversed), **AND**
-- `LatestSchedDelivDate` is not null, **AND**
-- `LatestSchedDelivDate < TODAY` (the delivery window has closed)
-
-This is distinct from NOT DIFOT in that no net quantity has been received at all. A fully reversed GR is treated the same as no GR.
-
-When a line is OVERDUE, the following fields are intentionally left blank as no meaningful delivery data exists: `FirstGRPostingDate`, `LatestGRPostingDate`, `QuantityVariance`, `DateVarianceInDays`, `IsDeliveredInFull`, `IsDeliveredOnTime`.
+This status has been removed. Items that are past their scheduled delivery date with no net goods receipt are now classified as **NOT DIFOT** — the delivery window has closed, making it a DIFOT failure by definition.
 
 ---
 
@@ -167,7 +179,7 @@ This status applies to items with no GR at all, fully reversed GRs, and partial 
 | > 0 (partial) | No | Past or any | **NOT DIFOT** |
 | > 0 (partial) | No | Future | **PENDING** |
 | Zero or null | — | Future or no sched. date | **PENDING** |
-| Zero or null | — | Past | **OVERDUE** |
+| Zero or null | — | Past | **NOT DIFOT** |
 
 ---
 
